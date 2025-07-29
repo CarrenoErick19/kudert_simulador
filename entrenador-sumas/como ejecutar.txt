@@ -1,0 +1,30 @@
+npm start
+
+opcion multiple actual:
+
+Modo "mezclado" (50%):
+Solo 1 opción con unidad correcta (la respuesta).
+
+356 + 760 + 197 = ?
+Opciones: 1313 (correcta, unidad 3), 1525, 1084, 980 (unidades diferentes).
+
+2. Modo "semi-mezclado" (25%):
+2 opciones con unidad correcta, separadas por 200.
+
+418 + 294 + 854 = ?
+Opciones: 1566 (correcta), 1766 (distractor, +200), 1225, 1280.
+
+3. Modo "uniforme" (25%):
+Todas con misma unidad, separadas por ≥200.
+
+1313 (correcta), 1113 (-200), 1513 (+200), 1718 (unidad diferente, descartable).
+
+como aumentar las proporciones en opcion multiple 
+linea 98 a 102
+
+const modeRand = Math.random();
+const mode = 
+  modeRand < 0.5 ? 'mezclado' :  // 50%
+  modeRand < 0.75 ? 'semi-mezclado' : 'uniforme'; // 25% cada uno
+
+buscar cuando ya se sume mejor disminuir modo mezclado
