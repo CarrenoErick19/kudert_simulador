@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Series de Letras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .timer-bar { transition: width 1s linear; }
+        .option-btn, .mode-btn { transition: all 0.3s; }
+        .option-btn:hover, .mode-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .correct { background-color: #22c55e !important; color: white; }
+        .incorrect { background-color: #ef4444 !important; color: white; }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 text-center">
+        <!-- Pantalla de Selección de Modo -->
+        <div id="mode-selection-screen">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-4">Simulador de Series de Letras</h1>
+            <p class="text-slate-600 mb-8">Elige un modo para comenzar tu entrenamiento.</p>
+            <div class="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
+                <button type="button" data-mode="training" class="mode-btn bg-green-500 text-white p-6 rounded-lg">
+                    <h2 class="text-xl font-bold mb-2">Modo Entrenamiento</h2>
+                    <p class="font-light text-sm">Aprende la posición de cada letra en el alfabeto.</p>
+                </button>
+                <button type="button" data-mode="practice" class="mode-btn bg-sky-500 text-white p-6 rounded-lg">
+                    <h2 class="text-xl font-bold mb-2">Modo Práctica</h2>
+                    <p class="font-light text-sm">Recibe ayudas visuales y explicaciones de cada patrón.</p>
+                </button>
+                <button type="button" data-mode="realistic" class="mode-btn bg-indigo-600 text-white p-6 rounded-lg">
+                    <h2 class="text-xl font-bold mb-2">Modo Realista</h2>
+                    <p class="font-light text-sm">Enfréntate al examen sin ayudas, solo tú contra el reloj.</p>
+                </button>
+            </div>
+        </div>
+        <!-- Pantalla de Configuración (Práctica/Realista) -->
+        <div id="settings-screen" class="hidden">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Configura tu Práctica</h1>
+            <div class="my-8">
+                <label for="questions-number" class="block text-lg font-medium text-slate-700 mb-2">¿Cuántos ejercicios quieres resolver?</label>
+                <input type="number" id="questions-number" value="10" min="1" max="50" class="w-32 text-center text-lg p-2 border border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex gap-4 justify-center">
+                <button type="button" id="back-to-mode-select-btn" class="w-auto bg-slate-200 text-slate-700 font-bold py-3 px-8 rounded-lg text-lg hover:bg-slate-300">Volver</button>
+                <button type="button" id="start-btn" class="w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-indigo-700">Comenzar</button>
+            </div>
+        </div>
+        <!-- Pantalla de Selección de Alfabeto para Entrenamiento -->
+        <div id="training-alphabet-selection-screen" class="hidden">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-4">Modo Entrenamiento</h1>
+            <p class="text-slate-600 mb-8">Elige el alfabeto que quieres practicar.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <button type="button" data-alphabet="EN" class="mode-btn bg-slate-700 text-white p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-2">Alfabeto Inglés</h2>
+                    <p class="font-light">(26 letras, sin Ñ)</p>
+                </button>
+                <button type="button" data-alphabet="ES" class="mode-btn bg-slate-700 text-white p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-2">Alfabeto Español</h2>
+                    <p class="font-light">(27 letras, con Ñ)</p>
+                </button>
+            </div>
+            <button type="button" id="back-to-mode-select-btn-2" class="mt-8 w-auto bg-slate-200 text-slate-700 font-bold py-2 px-6 rounded-lg text-md hover:bg-slate-300">Volver al Menú</button>
+        </div>
+        <!-- Pantalla de Entrenamiento -->
+        <div id="training-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <button type="button" id="training-back-btn" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg">← Menú</button>
+                <h2 class="text-xl font-bold text-green-600">Modo Entrenamiento</h2>
+                <div class="w-20"></div>
+            </div>
+            <div id="training-question-container" class="my-8 p-6 bg-slate-50 rounded-lg shadow-inner">
+                <p id="training-question" class="text-2xl font-semibold text-slate-800 mb-4"></p>
+                <input type="text" id="training-answer-input" class="w-40 text-center text-2xl p-2 border border-slate-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 uppercase">
+            </div>
+            <button type="button" id="training-check-btn" class="w-full md:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-700">Comprobar</button>
+            <button type="button" class="next-btn hidden mt-4 w-full md:w-auto bg-slate-700 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-slate-800">Siguiente</button>
+            <div id="training-feedback" class="mt-4 text-xl font-bold h-8"></div>
+        </div>
+        <!-- Pantalla del Juego (Práctica/Realista) -->
+        <div id="game-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <button type="button" id="back-to-menu-btn" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg">← Menú</button>
+                <div id="alphabet-indicator" class="text-sm font-bold bg-gray-200 text-gray-700 px-3 py-1 rounded-full"></div>
+                <div id="progress-indicator" class="text-lg font-semibold text-slate-600"></div>
+                <div id="score" class="text-lg font-bold text-indigo-600">Puntaje: 0</div>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-6 mb-6 shadow-inner">
+                <div id="problem-container" class="text-4xl md:text-5xl font-bold tracking-widest text-slate-800 mb-2 h-16 flex items-center justify-center"></div>
+                <div id="numeric-series-container" class="text-slate-500 text-lg font-medium tracking-wider mb-4 h-6"></div>
+                <div class="w-full bg-slate-200 rounded-full h-4">
+                    <div id="timer-bar" class="bg-indigo-500 h-4 rounded-full timer-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div id="options-container" class="grid grid-cols-2 gap-4"></div>
+            <div id="feedback-container" class="mt-4 text-2xl font-bold h-8"></div>
+            <div id="explanation-container" class="hidden mt-2 p-4 bg-sky-100 text-sky-800 rounded-lg text-center font-medium"></div>
+            <button type="button" class="next-btn hidden mt-4 w-full md:w-auto bg-slate-700 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-slate-800">Siguiente</button>
+        </div>
+        <!-- Pantalla Final -->
+        <div id="end-screen" class="hidden">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-4">¡Práctica Completada!</h1>
+            <div id="final-score" class="text-2xl text-slate-600 mb-8"></div>
+            <button type="button" id="restart-btn" class="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-indigo-700">Volver al Menú</button>
+        </div>
+    </div>
+    <script>
+        // --- CONSTANTES Y VARIABLES GLOBALES ---
+        const ALPHABETS = {
+            EN: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+            ES: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('')
+        };
+        const TIME_LIMIT = 7;
+        let currentProblem = {}, score = 0, timer, gameActive = false, totalQuestions = 10, currentQuestionNumber = 0, gameMode = 'realistic';
+        let trainingState = {};
+
+        // --- ELEMENTOS DEL DOM ---
+        const screens = {
+            modeSelection: document.getElementById('mode-selection-screen'),
+            settings: document.getElementById('settings-screen'),
+            trainingAlphabet: document.getElementById('training-alphabet-selection-screen'),
+            training: document.getElementById('training-screen'),
+            game: document.getElementById('game-screen'),
+            end: document.getElementById('end-screen')
+        };
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const backToMenuBtn = document.getElementById('back-to-menu-btn');
+        const backToModeSelectBtn = document.getElementById('back-to-mode-select-btn');
+        const backToModeSelectBtn2 = document.getElementById('back-to-mode-select-btn-2');
+        const trainingBackBtn = document.getElementById('training-back-btn');
+        const trainingCheckBtn = document.getElementById('training-check-btn');
+        const problemContainer = document.getElementById('problem-container');
+        const numericSeriesContainer = document.getElementById('numeric-series-container');
+        const optionsContainer = document.getElementById('options-container');
+        const scoreEl = document.getElementById('score');
+        const timerBar = document.getElementById('timer-bar');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const explanationContainer = document.getElementById('explanation-container');
+        const questionsNumberInput = document.getElementById('questions-number');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const finalScoreEl = document.getElementById('final-score');
+        const alphabetIndicator = document.getElementById('alphabet-indicator');
+        const trainingQuestion = document.getElementById('training-question');
+        const trainingAnswerInput = document.getElementById('training-answer-input');
+        const trainingFeedback = document.getElementById('training-feedback');
+
+        // --- FUNCIONES DE AYUDA ---
+        const getIndex = (letter, alphabet) => alphabet.indexOf(letter) + 1;
+        const getLetter = (index, alphabet) => {
+            const len = alphabet.length;
+            const adjustedIndex = ((index - 1) % len + len) % len; // Ciclo seguro
+            return alphabet[adjustedIndex];
+        };
+
+        // --- GENERADORES DE PROBLEMAS ---
+        const problemGenerators = {
+            arithmetic: (alphabet) => {
+                const step = Math.floor(Math.random() * 3) + 2;
+                const startIdx = Math.floor(Math.random() * (alphabet.length - step * 5)) + 1;
+                const series = Array.from({ length: 5 }, (_, i) => getLetter(startIdx + i * step, alphabet));
+                const answer = series.pop();
+                return { series, answer, explanation: `Serie aritmética con salto constante de +${step}.` };
+            },
+            decreasing: (alphabet) => {
+                const step = Math.floor(Math.random() * 3) + 2;
+                const startIdx = Math.floor(Math.random() * (alphabet.length - step * 5)) + step * 5;
+                const series = Array.from({ length: 5 }, (_, i) => getLetter(startIdx - i * step, alphabet));
+                const answer = series.pop();
+                return { series, answer, explanation: `Serie decreciente con salto constante de -${step}.` };
+            },
+            alternating: (alphabet) => {
+                let step1 = Math.floor(Math.random() * 2) + 2;
+                let step2 = Math.floor(Math.random() * 2) + 2;
+                if (step1 === step2) step2++;
+                let currentIdx = Math.floor(Math.random() * (alphabet.length / 3)) + 1;
+                const series = [];
+                for (let i = 0; i < 5; i++) {
+                    series.push(getLetter(currentIdx, alphabet));
+                    currentIdx += (i % 2 === 0) ? step1 : step2;
+                    if (currentIdx > alphabet.length * 2) return problemGenerators.arithmetic(alphabet);
+                }
+                const answer = series.pop();
+                return { series, answer, explanation: `Serie con patrón alternado de +${step1} y +${step2}.` };
+            },
+            variableIncrement: (alphabet) => {
+                let currentIdx = Math.floor(Math.random() * 10) + 1;
+                const series = [];
+                for (let i = 0; i < 5; i++) {
+                    series.push(getLetter(currentIdx, alphabet));
+                    currentIdx += i + 1;
+                }
+                const answer = series.pop();
+                return { series, answer, explanation: `Serie con incremento variable (+1, +2, +3, +4...).` };
+            },
+            pairedSeries: (alphabet) => {
+                const step1 = Math.floor(Math.random() * 3) + 2;
+                const step2 = Math.floor(Math.random() * 3) + 2;
+                let start1 = Math.floor(Math.random() * 10) + 1;
+                let start2 = Math.floor(Math.random() * 10) + 1;
+                const series = [];
+                for (let i = 0; i < 3; i++) {
+                    const l1 = getLetter(start1, alphabet);
+                    const l2 = getLetter(start2, alphabet);
+                    series.push(`${l1}${l2}`);
+                    start1 += step1;
+                    start2 += step2;
+                }
+                const answer = `${getLetter(start1, alphabet)}${getLetter(start2, alphabet)}`;
+                return { series, answer, explanation: `Dos series independientes. 1ª letra: +${step1}. 2ª letra: +${step2}.` };
+            }
+        };
+
+        const generateOptions = (correctAnswer, alphabet) => {
+            const options = new Set([correctAnswer]);
+            const isPaired = correctAnswer.length > 1;
+            while (options.size < 4) {
+                let option = '';
+                if (isPaired) {
+                    option = getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet) +
+                             getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet);
+                } else {
+                    option = getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet);
+                }
+                options.add(option);
+            }
+            return Array.from(options).sort(() => Math.random() - 0.5);
+        };
+
+        const generateNewProblem = () => {
+            let problem, alphabet, alphabetType;
+            const useSpanishAlphabet = Math.random() > 0.5;
+            alphabetType = useSpanishAlphabet ? 'ES' : 'EN';
+            alphabet = ALPHABETS[alphabetType];
+            const generatorKeys = Object.keys(problemGenerators);
+            const randomKey = generatorKeys[Math.floor(Math.random() * generatorKeys.length)];
+            problem = problemGenerators[randomKey](alphabet);
+            const options = generateOptions(problem.answer, alphabet);
+            const numericSeries = problem.series.map(item => {
+                if (item.length > 1) {
+                    return `(${getIndex(item[0], alphabet)},${getIndex(item[1], alphabet)})`;
+                } else {
+                    return getIndex(item, alphabet);
+                }
+            }).join(' → ');
+            currentProblem = {
+                ...problem,
+                options,
+                series: problem.series.join(', '),
+                numericSeries,
+                alphabetType
+            };
+        };
+
+        // --- NAVEGACIÓN ---
+        const showScreen = (screenName) => {
+            Object.values(screens).forEach(s => s.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+        };
+
+        const returnToMenu = () => {
+            clearTimeout(timer);
+            gameActive = false;
+            showScreen('modeSelection');
+        };
+
+        // --- LÓGICA DEL JUEGO ---
+        const displayProblem = () => {
+            gameActive = true;
+            feedbackContainer.textContent = '';
+            explanationContainer.classList.add('hidden');
+            numericSeriesContainer.textContent = gameMode === 'practice' ? currentProblem.numericSeries : '';
+            alphabetIndicator.textContent = `Alfabeto: ${currentProblem.alphabetType}`;
+            problemContainer.textContent = currentProblem.series;
+            optionsContainer.innerHTML = '';
+            currentProblem.options.forEach(option => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = option;
+                button.className = 'option-btn w-full py-4 text-2xl font-bold rounded-lg bg-slate-200 hover:bg-slate-300 shadow';
+                button.onclick = () => handleAnswer(option, button);
+                optionsContainer.appendChild(button);
+            });
+            startTimer();
+        };
+
+        const startTimer = () => {
+            clearTimeout(timer);
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            void timerBar.offsetWidth; // Forzar reflujo
+            timerBar.style.transition = `width ${TIME_LIMIT}s linear`;
+            timerBar.style.width = '0%';
+            timer = setTimeout(() => handleAnswer(null), TIME_LIMIT * 1000);
+        };
+
+        const handleAnswer = (selectedOption, buttonEl) => {
+            if (!gameActive) return;
+            gameActive = false;
+            clearTimeout(timer);
+            optionsContainer.querySelectorAll('button').forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === currentProblem.answer) {
+                    btn.classList.add('correct');
+                }
+            });
+            if (selectedOption === currentProblem.answer) {
+                score++;
+                feedbackContainer.textContent = '¡Correcto!';
+                feedbackContainer.className = 'mt-4 text-2xl font-bold h-8 text-green-500';
+            } else {
+                feedbackContainer.textContent = selectedOption === null ? "¡Se acabó el tiempo!" : 'Incorrecto';
+                feedbackContainer.className = 'mt-4 text-2xl font-bold h-8 text-red-500';
+                if (buttonEl) buttonEl.classList.add('incorrect');
+            }
+            if (gameMode === 'practice') {
+                explanationContainer.textContent = `Explicación: ${currentProblem.explanation}`;
+                explanationContainer.classList.remove('hidden');
+            }
+            scoreEl.textContent = `Puntaje: ${score}`;
+            // Mostrar el botón "Siguiente"
+            const nextButton = document.querySelector('#game-screen .next-btn');
+            if (nextButton) nextButton.classList.remove('hidden');
+        };
+
+        const nextQuestion = () => {
+            currentQuestionNumber++;
+            if (currentQuestionNumber > totalQuestions) {
+                endGame();
+                return;
+            }
+            progressIndicator.textContent = `Pregunta ${currentQuestionNumber}/${totalQuestions}`;
+            const nextButton = document.querySelector('#game-screen .next-btn');
+            if (nextButton) nextButton.classList.add('hidden');
+            generateNewProblem();
+            displayProblem();
+        };
+
+        const startGame = () => {
+            totalQuestions = parseInt(questionsNumberInput.value) || 10;
+            score = 0;
+            currentQuestionNumber = 0;
+            scoreEl.textContent = `Puntaje: ${score}`;
+            progressIndicator.textContent = `Pregunta ${currentQuestionNumber + 1}/${totalQuestions}`;
+            showScreen('game');
+            nextQuestion();
+        };
+
+        const endGame = () => {
+            showScreen('end');
+            finalScoreEl.textContent = `Tu puntaje final es: ${score} de ${totalQuestions}`;
+        };
+
+        // --- MODO ENTRENAMIENTO (solo pregunta: número de letra) ---
+        const startTraining = (alphabetType) => {
+            trainingState = {
+                alphabet: ALPHABETS[alphabetType],
+                letters: [...ALPHABETS[alphabetType]],
+                currentIndex: 0,
+                totalCorrect: 0,
+                totalIncorrect: 0
+            };
+
+            // Mezclar letras aleatoriamente
+            trainingState.letters.sort(() => Math.random() - 0.5);
+
+            showScreen('training');
+            generateTrainingQuestion();
+        };
+
+        const generateTrainingQuestion = () => {
+            const { letters, currentIndex } = trainingState;
+            if (currentIndex >= letters.length) {
+                endTraining();
+                return;
+            }
+
+            const letter = letters[currentIndex];
+            const number = getIndex(letter, trainingState.alphabet);
+
+            trainingState.currentQuestion = { letter, number };
+
+            trainingQuestion.textContent = `¿Qué número es la letra '${letter}'?`;
+            trainingAnswerInput.value = '';
+            trainingAnswerInput.disabled = false;
+            trainingAnswerInput.focus();
+            trainingFeedback.textContent = '';
+            trainingCheckBtn.classList.remove('hidden');
+            document.querySelector('#training-screen .next-btn').classList.add('hidden');
+        };
+
+        const checkTrainingAnswer = () => {
+            const userAnswer = trainingAnswerInput.value.trim();
+            const correctAnswer = String(trainingState.currentQuestion.number);
+
+            const isCorrect = userAnswer === correctAnswer;
+
+            if (isCorrect) {
+                trainingFeedback.textContent = '¡Correcto!';
+                trainingFeedback.className = 'mt-4 text-xl font-bold h-8 text-green-500';
+                trainingState.totalCorrect++;
+            } else {
+                trainingFeedback.textContent = `Incorrecto. La respuesta era: ${correctAnswer}`;
+                trainingFeedback.className = 'mt-4 text-xl font-bold h-8 text-red-500';
+                trainingState.totalIncorrect++;
+            }
+
+            trainingAnswerInput.disabled = true;
+            trainingCheckBtn.classList.add('hidden');
+            document.querySelector('#training-screen .next-btn').classList.remove('hidden');
+        };
+
+        const endTraining = () => {
+            showScreen('end');
+            finalScoreEl.innerHTML = `
+                <div class="text-2xl text-slate-600 mb-4">Entrenamiento completado</div>
+                <div class="text-lg">
+                    <p>Aciertos: <strong>${trainingState.totalCorrect}</strong></p>
+                    <p>Errores: <strong>${trainingState.totalIncorrect}</strong></p>
+                    <p>Total: <strong>${trainingState.letters.length}</strong> letras</p>
+                </div>
+            `;
+        };
+
+        // --- EVENTOS (con delegación para botones "Siguiente") ---
+        screens.modeSelection.addEventListener('click', (e) => {
+            const btn = e.target.closest('.mode-btn');
+            if (!btn) return;
+            gameMode = btn.dataset.mode;
+            if (gameMode === 'training') {
+                showScreen('trainingAlphabet');
+            } else {
+                showScreen('settings');
+            }
+        });
+
+        screens.trainingAlphabet.addEventListener('click', (e) => {
+            const btn = e.target.closest('.mode-btn');
+            if (!btn) return;
+            startTraining(btn.dataset.alphabet);
+        });
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', returnToMenu);
+        backToMenuBtn.addEventListener('click', returnToMenu);
+        backToModeSelectBtn.addEventListener('click', returnToMenu);
+        backToModeSelectBtn2.addEventListener('click', returnToMenu);
+        trainingBackBtn.addEventListener('click', returnToMenu);
+        trainingCheckBtn.addEventListener('click', checkTrainingAnswer);
+        trainingAnswerInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') checkTrainingAnswer();
+        });
+
+        // Delegación de eventos para los botones "Siguiente"
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.next-btn')) {
+                if (screens.training.classList.contains('hidden')) {
+                    // En modo juego
+                    nextQuestion();
+                } else {
+                    // En modo entrenamiento
+                    trainingState.currentIndex++;
+                    generateTrainingQuestion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
