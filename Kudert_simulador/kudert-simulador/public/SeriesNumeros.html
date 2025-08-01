@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Series Numéricas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .timer-bar {
+            transition: width 1s linear;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .input-field {
+            transition: all 0.2s ease-in-out;
+        }
+        .input-field:focus {
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+            border-color: #4299e1;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="w-full max-w-2xl mx-auto">
+
+        <!-- Pantalla de Configuración Inicial -->
+        <div id="setup-screen" class="card text-center fade-in">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Simulador de Series Numéricas</h1>
+            <p class="text-gray-600 mb-8">Practica ejercicios con retroalimentación detallada y un tiempo límite de 7 segundos por pregunta.</p>
+            <div class="mb-6">
+                <label for="num-exercises" class="block text-lg font-medium text-gray-700 mb-2">¿Cuántos ejercicios quieres practicar?</label>
+                <input type="number" id="num-exercises" value="5" min="1" max="50" class="input-field w-40 text-center text-xl p-3 border-2 border-gray-300 rounded-lg focus:outline-none">
+            </div>
+            <button id="start-btn" class="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-10 rounded-lg text-lg btn hover:bg-indigo-700">
+                Comenzar Práctica
+            </button>
+        </div>
+
+        <!-- Pantalla de Práctica -->
+        <div id="practice-screen" class="hidden card fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <div class="text-lg font-medium text-gray-700">
+                    Pregunta <span id="current-question"></span> de <span id="total-questions"></span>
+                </div>
+                <div class="text-lg font-bold text-indigo-600">
+                    Puntaje: <span id="score">0</span>
+                </div>
+            </div>
+            
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                <div id="timer-bar" class="bg-indigo-500 h-2.5 rounded-full" style="width: 100%"></div>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-lg mb-6 text-center">
+                <p class="text-gray-600 mb-2 text-lg">Completa la siguiente serie:</p>
+                <p id="series-question" class="text-3xl md:text-4xl font-bold text-gray-800 tracking-wider"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="number" id="answer-input" placeholder="Tu respuesta" class="input-field flex-grow text-xl p-4 border-2 border-gray-300 rounded-lg focus:outline-none text-center sm:text-left">
+                <button id="check-btn" class="bg-green-500 text-white font-bold py-4 px-8 rounded-lg text-lg btn hover:bg-green-600">Verificar</button>
+                <button id="next-btn" class="hidden bg-blue-500 text-white font-bold py-4 px-8 rounded-lg text-lg btn hover:bg-blue-600">Siguiente</button>
+            </div>
+            
+            <div id="feedback-container" class="hidden mt-6 p-4 rounded-lg text-left text-base">
+            </div>
+        </div>
+
+        <!-- Pantalla de Resultados -->
+        <div id="results-screen" class="hidden card text-center fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">¡Práctica Finalizada!</h2>
+            <p class="text-xl text-gray-600 mb-6">Este es tu resultado final:</p>
+            <div class="bg-indigo-50 p-8 rounded-xl mb-8">
+                <p class="text-2xl font-medium text-gray-700">Respuestas Correctas</p>
+                <p class="text-6xl font-bold text-indigo-600 my-2">
+                    <span id="final-score"></span> / <span id="total-score"></span>
+                </p>
+                <p id="result-message" class="text-lg font-medium"></p>
+            </div>
+            <button id="restart-btn" class="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-10 rounded-lg text-lg btn hover:bg-indigo-700">
+                Practicar de Nuevo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Elementos de la UI
+        const setupScreen = document.getElementById('setup-screen');
+        const practiceScreen = document.getElementById('practice-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        
+        const startBtn = document.getElementById('start-btn');
+        const numExercisesInput = document.getElementById('num-exercises');
+        const checkBtn = document.getElementById('check-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const answerInput = document.getElementById('answer-input');
+
+        const currentQuestionEl = document.getElementById('current-question');
+        const totalQuestionsEl = document.getElementById('total-questions');
+        const scoreEl = document.getElementById('score');
+        const seriesQuestionEl = document.getElementById('series-question');
+        const timerBar = document.getElementById('timer-bar');
+
+        const finalScoreEl = document.getElementById('final-score');
+        const totalScoreEl = document.getElementById('total-score');
+        const resultMessageEl = document.getElementById('result-message');
+
+        const feedbackContainer = document.getElementById('feedback-container');
+
+        // Estado del juego
+        let state = {
+            totalExercises: 0,
+            currentExerciseIndex: 0,
+            score: 0,
+            currentSeries: null,
+            correctAnswer: null,
+            explanation: null,
+            timer: null,
+        };
+
+        const TIME_LIMIT = 7;
+
+        // --- GENERADORES DE SERIES ---
+        const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+        function generateRepetitionSeries() {
+            const isAscending = Math.random() < 0.5;
+            const start = isAscending ? randInt(2, 5) : randInt(6, 9);
+            let series = [];
+            let currentNum = start;
+            let repetitions = isAscending ? start - 1 : 10 - start;
+
+            for (let i = 0; i < 4; i++) {
+                if (repetitions <= 0) break;
+                for (let j = 0; j < repetitions; j++) {
+                    series.push(currentNum);
+                }
+                if (isAscending) {
+                    currentNum++;
+                    repetitions++;
+                } else {
+                    currentNum--;
+                    repetitions--;
+                }
+            }
+            
+            const question = series.join(' ');
+            const answer = currentNum;
+            const explanation = `Es una serie de repetición. Cada número se repite un número de veces específico (ej: el 3 se repite 2 veces, el 4 se repite 3, etc.). El número que sigue en la secuencia es ${answer}.`;
+            return { question, answer, explanation };
+        }
+
+        function generateArithmeticSeries() {
+            if (Math.random() < 0.6) { // Razón constante
+                const start = randInt(1, 20);
+                const reason = randInt(2, 12) * (Math.random() < 0.5 ? 1 : -1);
+                let series = [];
+                for (let i = 0; i < 5; i++) {
+                    series.push(start + i * reason);
+                }
+                const answer = start + 5 * reason;
+                const explanation = `Es una serie aritmética con una razón constante. Se ${reason > 0 ? 'suma' : 'resta'} ${Math.abs(reason)} a cada término para obtener el siguiente. ${series[series.length - 1]} + (${reason}) = ${answer}.`;
+                return { question: series.join(' - '), answer, explanation };
+            } 
+            else { // Razón variable
+                const start = randInt(50, 80);
+                let reasonChange = randInt(1, 3);
+                let currentReason = -randInt(1, 3);
+                let series = [start];
+                let currentVal = start;
+                for (let i = 0; i < 4; i++) {
+                    currentVal += currentReason;
+                    series.push(currentVal);
+                    currentReason -= reasonChange;
+                }
+                const answer = currentVal + currentReason;
+                const explanation = `Es una serie aritmética con una razón variable. La cantidad que se resta aumenta en ${reasonChange} en cada paso. El último paso fue ${series[series.length - 2]} + (${currentReason + reasonChange}) = ${series[series.length - 1]}. El siguiente es ${series[series.length - 1]} + (${currentReason}) = ${answer}.`;
+                return { question: series.join(' - '), answer, explanation };
+            }
+        }
+
+        function generateGeometricSeries() {
+            const isMultiplication = Math.random() < 0.5;
+            if (isMultiplication) {
+                const start = randInt(2, 5);
+                const reason = randInt(2, 4);
+                let series = [];
+                let currentVal = start;
+                for (let i = 0; i < 3; i++) {
+                    series.push(currentVal);
+                    currentVal *= reason;
+                }
+                const answer = currentVal;
+                const explanation = `Es una serie geométrica. Cada término se multiplica por ${reason} para obtener el siguiente. ${series[series.length - 1]} * ${reason} = ${answer}.`;
+                return { question: series.join(' - '), answer, explanation };
+            } else { // División
+                const reason = randInt(2, 3);
+                const answer = randInt(5, 15);
+                const start = answer * Math.pow(reason, 3);
+                let series = [];
+                let currentVal = start;
+                 for (let i = 0; i < 3; i++) {
+                    series.push(currentVal);
+                    currentVal /= reason;
+                }
+                const explanation = `Es una serie geométrica. Cada término se divide para ${reason} para obtener el siguiente. ${series[series.length - 1]} / ${reason} = ${answer}.`;
+                return { question: series.join(' - '), answer, explanation };
+            }
+        }
+        
+        function generateAlternatingSeries() {
+            const isAscending = Math.random() < 0.5;
+            let groups = [];
+            let startNum = isAscending ? randInt(1, 5) : randInt(7, 9);
+            
+            for(let i = 0; i < 2; i++) {
+                let group;
+                if(isAscending) {
+                    group = [startNum, startNum + 2, startNum + 1];
+                    startNum += 3;
+                } else {
+                    group = [startNum, startNum - 2, startNum - 1];
+                    startNum -= 3;
+                }
+                groups.push(...group);
+            }
+            
+            const question = groups.join(' ');
+            const answer = isAscending ? startNum : startNum;
+            const explanation = `Es una serie alternante. Los números se agrupan de a tres (ej: 2, 3, 4) y se intercambia la posición del segundo y tercer número (2, 4, 3). El siguiente número que iniciaría un nuevo grupo es ${answer}.`;
+            return { question, answer, explanation };
+        }
+
+        function generateSpecialSeries() { // Fibonacci
+            const a = randInt(1, 5);
+            const b = randInt(1, 5);
+            let series = [a, b];
+            for (let i = 0; i < 5; i++) {
+                series.push(series[i] + series[i+1]);
+            }
+            const answer = series.pop();
+            const question = series.join(' ');
+            const explanation = `Es una serie de Fibonacci. Cada número es la suma de los dos anteriores. ${series[series.length - 2]} + ${series[series.length - 1]} = ${answer}.`;
+            return { question, answer, explanation };
+        }
+        
+        const exerciseGenerators = [
+            generateRepetitionSeries,
+            generateArithmeticSeries,
+            generateGeometricSeries,
+            generateAlternatingSeries,
+            generateSpecialSeries
+        ];
+
+        function generateExercise() {
+            const randomIndex = Math.floor(Math.random() * exerciseGenerators.length);
+            const exercise = exerciseGenerators[randomIndex]();
+            state.currentSeries = exercise.question;
+            state.correctAnswer = exercise.answer;
+            state.explanation = exercise.explanation;
+        }
+
+        // --- LÓGICA DEL JUEGO ---
+
+        function startGame() {
+            state.totalExercises = parseInt(numExercisesInput.value) || 5;
+            state.currentExerciseIndex = 0;
+            state.score = 0;
+            
+            setupScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            practiceScreen.classList.remove('hidden');
+            
+            totalQuestionsEl.textContent = state.totalExercises;
+            scoreEl.textContent = state.score;
+            
+            nextRound();
+        }
+
+        function nextRound() {
+            if (state.currentExerciseIndex >= state.totalExercises) {
+                endGame();
+                return;
+            }
+            
+            state.currentExerciseIndex++;
+            currentQuestionEl.textContent = state.currentExerciseIndex;
+            
+            answerInput.value = '';
+            answerInput.disabled = false;
+            answerInput.focus();
+            checkBtn.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            feedbackContainer.classList.add('hidden');
+            
+            generateExercise();
+            seriesQuestionEl.textContent = state.currentSeries + ' ... ?';
+            
+            startTimer();
+        }
+
+        function startTimer() {
+            clearTimeout(state.timer);
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            
+            void timerBar.offsetWidth; 
+
+            timerBar.style.transition = `width ${TIME_LIMIT}s linear`;
+            timerBar.style.width = '0%';
+
+            state.timer = setTimeout(() => {
+                handleAnswer(false, `¡Se acabó el tiempo! La respuesta correcta era ${state.correctAnswer}`);
+            }, TIME_LIMIT * 1000);
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(answerInput.value);
+            clearTimeout(state.timer);
+
+            if (isNaN(userAnswer)) {
+                handleAnswer(false, "Por favor, ingresa un número válido.");
+                return;
+            }
+            
+            const isCorrect = userAnswer === state.correctAnswer;
+            if (isCorrect) {
+                state.score++;
+                scoreEl.textContent = state.score;
+                handleAnswer(true, '¡Correcto!');
+            } else {
+                handleAnswer(false, `Incorrecto. La respuesta correcta era ${state.correctAnswer}`);
+            }
+        }
+        
+        function handleAnswer(isCorrect, message) {
+            answerInput.disabled = true;
+            checkBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+            nextBtn.focus();
+
+            feedbackContainer.classList.remove('hidden');
+            if (isCorrect) {
+                feedbackContainer.innerHTML = `<span class='font-bold'>${message}</span>`;
+                feedbackContainer.className = 'mt-6 p-4 rounded-lg text-center font-medium bg-green-100 text-green-700';
+            } else {
+                feedbackContainer.innerHTML = `<span class='font-bold'>${message}</span><br><strong class='mt-2 block'>Explicación:</strong> ${state.explanation}`;
+                feedbackContainer.className = 'mt-6 p-4 rounded-lg text-left bg-red-100 text-red-700';
+            }
+        }
+
+        function endGame() {
+            practiceScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+
+            finalScoreEl.textContent = state.score;
+            totalScoreEl.textContent = state.totalExercises;
+            
+            const percentage = (state.score / state.totalExercises) * 100;
+            let message = '';
+            if (percentage === 100) {
+                message = '¡Felicidades! Un puntaje perfecto.';
+            } else if (percentage >= 75) {
+                message = '¡Muy buen trabajo! Sigue así.';
+            } else if (percentage >= 50) {
+                message = '¡Nada mal! La práctica hace al maestro.';
+            } else {
+                message = 'Sigue practicando para mejorar. ¡Tú puedes!';
+            }
+            resultMessageEl.textContent = message;
+        }
+
+        function restartGame() {
+            resultsScreen.classList.add('hidden');
+            setupScreen.classList.remove('hidden');
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', restartGame);
+        checkBtn.addEventListener('click', checkAnswer);
+        nextBtn.addEventListener('click', nextRound);
+        answerInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (!checkBtn.classList.contains('hidden')) {
+                    checkAnswer();
+                } else {
+                    nextRound();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

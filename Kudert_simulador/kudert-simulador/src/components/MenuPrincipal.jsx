@@ -5,9 +5,21 @@ import { useNavigate } from 'react-router-dom';
 export default function MenuPrincipal() {
   const navigate = useNavigate();
 
-  // Función para abrir el simulador de Series de Letras
+  // Simuladores que abren archivos HTML desde /public
   const abrirSeriesLetras = () => {
-    window.location.href = '/SeriesLetras.html'; // ← Apunta al simulador original en public/
+    window.location.href = '/SeriesLetras.html';
+  };
+
+  const abrirAbstracto = () => {
+    window.location.href = '/Abstracto.html';
+  };
+
+  const abrirPersonalidad = () => {
+    window.location.href = '/Personalidad.html';
+  };
+
+  const abrirSeriesNumeros = () => {
+    window.location.href = '/SeriesNumeros.html';
   };
 
   return (
@@ -20,18 +32,19 @@ export default function MenuPrincipal() {
             Sumas
           </button>
 
-          {/* Botón que abre el simulador original */}
           <button className="option-button" onClick={abrirSeriesLetras}>
             Series de Letras
           </button>
 
-          <button className="option-button" onClick={() => navigate('/series-numeros')}>
+          <button className="option-button" onClick={abrirSeriesNumeros}>
             Series de Números
           </button>
-          <button className="option-button" onClick={() => navigate('/abstracto')}>
+
+          <button className="option-button" onClick={abrirAbstracto}>
             Razonamiento Abstracto
           </button>
-          <button className="option-button" onClick={() => navigate('/personalidad')}>
+
+          <button className="option-button" onClick={abrirPersonalidad}>
             Test de Personalidad
           </button>
         </div>
