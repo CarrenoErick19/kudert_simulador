@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const ALPHABETS = {
-  EN: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
-  ES: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('')
+  EN: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+  ES: "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split(""),
 };
 
 const TIME_LIMIT = 7;
@@ -11,75 +11,128 @@ const TIME_LIMIT = 7;
 export default function SeriesLetras() {
   const navigate = useNavigate();
 
-  // --- ESTADOS ---
-  const [screen, setScreen] = useState('modeSelection'); 
-  const [gameMode, setGameMode] = useState('realistic'); 
-  const [alphabetType, setAlphabetType] = useState('EN');
+  // --- ESTADOS GENERALES ---
+  const [screen, setScreen] = useState("modeSelection");
+  const [gameMode, setGameMode] = useState("realistic");
+  const [difficulty, setDifficulty] = useState("medium");
+  const [alphabetType, setAlphabetType] = useState("ES");
   const [totalQuestions, setTotalQuestions] = useState(10);
-  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
-  const [currentProblem, setCurrentProblem] = useState({});
-  const [showNextButton, setShowNextButton] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('');
+  const [currentProblem, setCurrentProblem] = useState(null);
+  const [feedback, setFeedback] = useState("");
+  const [feedbackColor, setFeedbackColor] = useState("");
+  const [showNext, setShowNext] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [explanation, setExplanation] = useState('');
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
   const timerRef = useRef(null);
-  const [questionsNumberInput, setQuestionsNumberInput] = useState(10);
-
-  // --- MODAL INSTRUCTIVO ---
+  const [questionsInput, setQuestionsInput] = useState(10);
   const [showInstructivo, setShowInstructivo] = useState(false);
-  const instructivoUrl = "https://drive.google.com/file/d/10fDxIdMrBatwk4vXrOmLkHft6gvAnKXp/preview";
-  const instructivoBackupUrl = "https://drive.google.com/file/d/10fDxIdMrBatwk4vXrOmLkHft6gvAnKXp/view?usp=sharing";
 
-  // --- AUXILIARES ---
-  const getIndex = (letter, alphabet) => alphabet.indexOf(letter) + 1;
+  const instructivoUrl =
+    "https://drive.google.com/file/d/10fDxIdMrBatwk4vXrOmLkHft6gvAnKXp/preview";
+
+  // --- FUNCIONES AUXILIARES ---
   const getLetter = (index, alphabet) => {
     const len = alphabet.length;
-    const adjustedIndex = ((index - 1) % len + len) % len;
-    return alphabet[adjustedIndex];
+    const adjusted = ((index - 1) % len + len) % len;
+    return alphabet[adjusted];
   };
 
+  // --- GENERADORES DE PROBLEMAS ---
   const problemGenerators = {
+    // 🔹 Serie aritmética (ascendente)
     arithmetic: (alphabet) => {
       const step = Math.floor(Math.random() * 3) + 2;
-      const startIdx = Math.floor(Math.random() * (alphabet.length - step * 5)) + 1;
-      const series = Array.from({ length: 5 }, (_, i) => getLetter(startIdx + i * step, alphabet));
-      const answer = series.pop();
-      return { series, answer, explanation: `Serie aritmética con salto constante de +${step}.` };
+      const start = Math.floor(Math.random() * (alphabet.length - step * 5));
+      const series = Array.from({ length: 5 }, (_, i) =>
+        getLetter(start + i * step + 1, alphabet)
+      );
+      const answer = getLetter(start + 5 * step + 1, alphabet);
+      return {
+        series,
+        answer,
+        explanation: `Serie aritmética con salto +${step}.`,
+      };
     },
+
+    // 🔹 Serie decreciente
     decreasing: (alphabet) => {
       const step = Math.floor(Math.random() * 3) + 2;
-      const startIdx = Math.floor(Math.random() * (alphabet.length - step * 5)) + step * 5;
-      const series = Array.from({ length: 5 }, (_, i) => getLetter(startIdx - i * step, alphabet));
-      const answer = series.pop();
-      return { series, answer, explanation: `Serie decreciente con salto constante de -${step}.` };
+      const start = Math.floor(Math.random() * (alphabet.length - 5)) + 6;
+      const series = Array.from({ length: 5 }, (_, i) =>
+        getLetter(start - i * step, alphabet)
+      );
+      const answer = getLetter(start - 5 * step, alphabet);
+      return {
+        series,
+        answer,
+        explanation: `Serie decreciente con salto -${step}.`,
+      };
     },
+
+    // 🔹 Serie alternante (+a, +b)
     alternating: (alphabet) => {
-      let step1 = Math.floor(Math.random() * 2) + 2;
-      let step2 = Math.floor(Math.random() * 2) + 2;
-      if (step1 === step2) step2++;
-      let currentIdx = Math.floor(Math.random() * (alphabet.length / 3)) + 1;
+      const step1 = Math.floor(Math.random() * 2) + 2;
+      const step2 = Math.floor(Math.random() * 2) + 3;
+      let idx = Math.floor(Math.random() * 10) + 1;
       const series = [];
       for (let i = 0; i < 5; i++) {
-        series.push(getLetter(currentIdx, alphabet));
-        currentIdx += (i % 2 === 0) ? step1 : step2;
-        if (currentIdx > alphabet.length * 2) return problemGenerators.arithmetic(alphabet);
+        series.push(getLetter(idx, alphabet));
+        idx += i % 2 === 0 ? step1 : step2;
       }
-      const answer = series.pop();
-      return { series, answer, explanation: `Serie con patrón alternado de +${step1} y +${step2}.` };
+      const answer = getLetter(idx, alphabet);
+      return {
+        series,
+        answer,
+        explanation: `Serie alternante (+${step1}, +${step2}).`,
+      };
     },
+
+    // 🔹 Incremento variable (+1, +2, +3...)
     variableIncrement: (alphabet) => {
-      let currentIdx = Math.floor(Math.random() * 10) + 1;
+      let idx = Math.floor(Math.random() * 10) + 1;
       const series = [];
       for (let i = 0; i < 5; i++) {
-        series.push(getLetter(currentIdx, alphabet));
-        currentIdx += i + 1;
+        series.push(getLetter(idx, alphabet));
+        idx += i + 1;
       }
-      const answer = series.pop();
-      return { series, answer, explanation: `Serie con incremento variable (+1, +2, +3, +4...).` };
+      const answer = getLetter(idx, alphabet);
+      return {
+        series,
+        answer,
+        explanation: "Serie con incremento variable (+1, +2, +3...).",
+      };
     },
+
+    // 🔹 Serie intercalada (dos subseries alternas)
+    interleavedSeries: (alphabet) => {
+      const stepA = Math.floor(Math.random() * 2) + 2;
+      const stepB = Math.floor(Math.random() * 2) + 2;
+      let startA = Math.floor(Math.random() * 10) + 1;
+      let startB = Math.floor(Math.random() * 10) + 1;
+      const series = [];
+      for (let i = 0; i < 6; i++) {
+        if (i % 2 === 0) {
+          series.push(getLetter(startA, alphabet));
+          startA += stepA;
+        } else {
+          series.push(getLetter(startB, alphabet));
+          startB += stepB;
+        }
+      }
+      const answer =
+        series.length % 2 === 0
+          ? getLetter(startA, alphabet)
+          : getLetter(startB, alphabet);
+      return {
+        series,
+        answer,
+        explanation: `Serie intercalada con dos subseries (+${stepA}, +${stepB}).`,
+      };
+    },
+
+    // 🔹 Serie doble (dos letras en paralelo)
     pairedSeries: (alphabet) => {
       const step1 = Math.floor(Math.random() * 3) + 2;
       const step2 = Math.floor(Math.random() * 3) + 2;
@@ -87,58 +140,103 @@ export default function SeriesLetras() {
       let start2 = Math.floor(Math.random() * 10) + 1;
       const series = [];
       for (let i = 0; i < 3; i++) {
-        const l1 = getLetter(start1, alphabet);
-        const l2 = getLetter(start2, alphabet);
-        series.push(`${l1}${l2}`);
+        series.push(
+          getLetter(start1, alphabet) + getLetter(start2, alphabet)
+        );
         start1 += step1;
         start2 += step2;
       }
-      const answer = `${getLetter(start1, alphabet)}${getLetter(start2, alphabet)}`;
-      return { series, answer, explanation: `Dos series independientes. 1ª letra: +${step1}. 2ª letra: +${step2}.` };
-    }
+      const answer =
+        getLetter(start1, alphabet) + getLetter(start2, alphabet);
+      return {
+        series,
+        answer,
+        explanation: `Serie doble con dos subseries paralelas.`,
+      };
+    },
+
+    // 🔹 Serie descendente en pares
+    descendingPairs: (alphabet) => {
+      let idx = Math.floor(Math.random() * (alphabet.length - 10)) + 10;
+      const series = [];
+      for (let i = 0; i < 4; i++) {
+        const first = getLetter(idx - i * 2, alphabet);
+        const second = getLetter(idx - i * 2 - 1, alphabet);
+        series.push(first + second);
+      }
+      const answer =
+        getLetter(idx - 8, alphabet) + getLetter(idx - 9, alphabet);
+      return {
+        series,
+        answer,
+        explanation: "Serie descendente en pares consecutivos.",
+      };
+    },
   };
 
-  const generateOptions = (correctAnswer, alphabet) => {
-    const options = new Set([correctAnswer]);
-    const isPaired = correctAnswer.length > 1;
+  // --- GENERACIÓN DE OPCIONES ---
+  const generateOptions = (correct, alphabet) => {
+    const options = new Set([correct]);
+    const paired = correct.length > 1;
     while (options.size < 4) {
-      let option = '';
-      if (isPaired) {
-        option = getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet) +
-                 getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet);
+      let opt = "";
+      if (paired) {
+        opt =
+          getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet) +
+          getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet);
       } else {
-        option = getLetter(Math.floor(Math.random() * alphabet.length) + 1, alphabet);
+        opt = getLetter(
+          Math.floor(Math.random() * alphabet.length) + 1,
+          alphabet
+        );
       }
-      options.add(option);
+      options.add(opt);
     }
     return Array.from(options).sort(() => Math.random() - 0.5);
   };
 
+  // --- GENERAR NUEVO PROBLEMA SEGÚN DIFICULTAD ---
   const generateNewProblem = () => {
     const alphabet = ALPHABETS[alphabetType];
-    const generatorKeys = Object.keys(problemGenerators);
-    const randomKey = generatorKeys[Math.floor(Math.random() * generatorKeys.length)];
+    let availableGenerators = [];
+
+    if (gameMode === "realistic") {
+      availableGenerators = Object.keys(problemGenerators);
+    } else {
+      if (difficulty === "easy")
+        availableGenerators = ["arithmetic", "decreasing"];
+      else if (difficulty === "medium")
+        availableGenerators = ["alternating", "variableIncrement", "interleavedSeries"];
+      else
+        availableGenerators = ["pairedSeries", "descendingPairs"];
+    }
+
+    const randomKey =
+      availableGenerators[
+        Math.floor(Math.random() * availableGenerators.length)
+      ];
+
     const problem = problemGenerators[randomKey](alphabet);
     const options = generateOptions(problem.answer, alphabet);
     setCurrentProblem({
       ...problem,
       options,
-      series: problem.series.join(', ')
+      series: problem.series.join(", "),
     });
+
     setTimeLeft(TIME_LIMIT);
-    setShowNextButton(false);
-    setFeedback('');
-    setFeedbackColor('');
-    setExplanation('');
+    setFeedback("");
+    setFeedbackColor("");
+    setShowNext(false);
+    setShowExplanation(false);
   };
 
-  // --- TIMER ---
+  // --- TEMPORIZADOR ---
   useEffect(() => {
-    if (screen === 'game' && currentProblem.series) {
+    if (screen === "game" && currentProblem) {
       clearInterval(timerRef.current);
-      setTimeLeft(TIME_LIMIT);
       timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
             handleAnswer(null);
@@ -151,68 +249,89 @@ export default function SeriesLetras() {
     return () => clearInterval(timerRef.current);
   }, [currentProblem, screen]);
 
-  // --- HANDLERS ---
-  const handleAnswer = (selectedOption) => {
+  // --- RESPUESTA ---
+  const handleAnswer = (option) => {
     clearInterval(timerRef.current);
-    if (!currentProblem.answer) return;
+    if (!currentProblem) return;
 
-    const correct = selectedOption === currentProblem.answer;
+    const correct = option === currentProblem.answer;
 
     if (correct) {
-      setScore(prev => prev + 1);
-      setFeedback('¡Correcto!');
-      setFeedbackColor('text-green-500');
+      setScore((s) => s + 1);
+      setFeedback("✅ ¡Correcto!");
+      setFeedbackColor("text-green-600");
     } else {
       setFeedback(
-        selectedOption === null 
-          ? `¡Se acabó el tiempo! La respuesta correcta era ${currentProblem.answer}`
-          : `Incorrecto, era ${currentProblem.answer}`
+        option === null
+          ? `⏱ Tiempo agotado. Respuesta: ${currentProblem.answer}`
+          : `❌ Incorrecto. Respuesta: ${currentProblem.answer}`
       );
-      setFeedbackColor('text-red-500');
+      setFeedbackColor("text-red-600");
     }
 
-    setExplanation(currentProblem.explanation);
-    setShowExplanation(gameMode === 'practice');
-    setShowNextButton(true);
+    if (gameMode === "practice") setShowExplanation(true);
+    setShowNext(true);
   };
 
   const nextQuestion = () => {
-    setShowNextButton(false);
-    if (currentQuestionNumber + 1 >= totalQuestions) {
-      setScreen('end');
+    if (currentQuestion + 1 >= totalQuestions) {
+      setScreen("end");
     } else {
-      setCurrentQuestionNumber(prev => prev + 1);
+      setCurrentQuestion((q) => q + 1);
       generateNewProblem();
     }
   };
 
   const startGame = () => {
-    setTotalQuestions(Number(questionsNumberInput) || 10);
+    setTotalQuestions(Number(questionsInput) || 10);
     setScore(0);
-    setCurrentQuestionNumber(0);
-    setScreen('game');
-    setShowNextButton(false);
+    setCurrentQuestion(0);
+    setScreen("game");
     generateNewProblem();
   };
 
+  // --- RENDER ---
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-100">
-      <h1 className="text-2xl font-bold mb-6">Series de Letras</h1>
-      <button onClick={() => navigate(-1)} className="bg-gray-500 text-white px-4 py-2 rounded-lg mb-4">
+      <h1 className="text-2xl font-bold mb-6">🧩 Series de Letras</h1>
+      <button
+        onClick={() => navigate(-1)}
+        className="bg-gray-500 text-white px-4 py-2 rounded-lg mb-4"
+      >
         Volver
       </button>
 
-      {/* BOTÓN INSTRUCTIVO */}
-      {screen === 'modeSelection' && (
-        <button
-          onClick={() => setShowInstructivo(true)}
-          className="bg-yellow-500 text-white px-4 py-2 rounded-lg mb-4"
-        >
-          Instructivo
-        </button>
+      {/* --- SELECCIÓN DE MODO --- */}
+      {screen === "modeSelection" && (
+        <div className="flex flex-col items-center gap-4">
+          <button
+            onClick={() => {
+              setGameMode("practice");
+              setScreen("settings");
+            }}
+            className="bg-sky-500 text-white px-6 py-4 rounded-lg"
+          >
+            🧠 Modo Práctica
+          </button>
+          <button
+            onClick={() => {
+              setGameMode("realistic");
+              setScreen("settings");
+            }}
+            className="bg-indigo-600 text-white px-6 py-4 rounded-lg"
+          >
+            ⏱️ Modo Realista
+          </button>
+          <button
+            onClick={() => setShowInstructivo(true)}
+            className="bg-yellow-500 text-white px-4 py-2 rounded-lg mt-2"
+          >
+            📘 Instructivo
+          </button>
+        </div>
       )}
 
-      {/* MODAL INSTRUCTIVO */}
+      {/* --- MODAL INSTRUCTIVO --- */}
       {showInstructivo && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-white w-11/12 md:w-3/4 lg:w-2/3 h-4/5 rounded shadow-lg flex flex-col">
@@ -225,83 +344,110 @@ export default function SeriesLetras() {
                 Cerrar
               </button>
             </div>
-            <iframe
-              src={instructivoUrl}
-              className="w-full h-full"
-              title="Instructivo Series Letras"
-            />
-            <div className="p-2 text-right">
-              <a
-                href={instructivoBackupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-              >
-                Abrir en otra pestaña
-              </a>
-            </div>
+            <iframe src={instructivoUrl} className="w-full h-full" />
           </div>
         </div>
       )}
 
-      {/* MODO SELECCIÓN */}
-      {screen === 'modeSelection' && (
-        <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-4">
-          <button onClick={() => { setGameMode('practice'); setScreen('settings'); }} className="mode-btn bg-sky-500 text-white p-6 rounded-lg">
-            Modo Práctica
-          </button>
-          <button onClick={() => { setGameMode('realistic'); setScreen('settings'); }} className="mode-btn bg-indigo-600 text-white p-6 rounded-lg">
-            Modo Realista
+      {/* --- CONFIGURACIÓN --- */}
+      {screen === "settings" && (
+        <div className="flex flex-col items-center gap-3">
+          {gameMode === "practice" && (
+            <>
+              <div>
+                <label className="mr-2 font-semibold">Dificultad:</label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="border p-2 rounded"
+                >
+                  <option value="easy">Fácil</option>
+                  <option value="medium">Media</option>
+                  <option value="hard">Difícil</option>
+                </select>
+              </div>
+              <div>
+                <label className="mr-2 font-semibold">Alfabeto:</label>
+                <select
+                  value={alphabetType}
+                  onChange={(e) => setAlphabetType(e.target.value)}
+                  className="border p-2 rounded"
+                >
+                  <option value="ES">Español</option>
+                  <option value="EN">Inglés</option>
+                </select>
+              </div>
+            </>
+          )}
+          <div>
+            <label className="mr-2 font-semibold">Preguntas:</label>
+            <input
+              type="number"
+              value={questionsInput}
+              onChange={(e) => setQuestionsInput(e.target.value)}
+              className="w-20 text-center border p-2 rounded"
+            />
+          </div>
+          <button
+            onClick={startGame}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg mt-2"
+          >
+            Comenzar
           </button>
         </div>
       )}
 
-      {/* PANTALLA DE AJUSTES */}
-      {screen === 'settings' && (
-        <div>
-          <input
-            type="number"
-            value={questionsNumberInput}
-            onChange={(e) => setQuestionsNumberInput(e.target.value)}
-            className="w-32 text-center text-lg p-2 border border-slate-300 rounded-lg shadow-sm mb-4"
-          />
-          <button onClick={startGame} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">Comenzar</button>
-        </div>
-      )}
-
-      {/* PANTALLA DE JUEGO */}
-      {screen === 'game' && currentProblem.series && (
+      {/* --- PANTALLA DE JUEGO --- */}
+      {screen === "game" && currentProblem && (
         <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl text-center">
           <div className="text-xl mb-4">{currentProblem.series}</div>
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {currentProblem.options.map((opt, idx) => (
-              <button 
-                key={idx}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {currentProblem.options.map((opt, i) => (
+              <button
+                key={i}
                 onClick={() => handleAnswer(opt)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
               >
                 {opt}
               </button>
             ))}
           </div>
-          <div className="text-lg mb-2">Tiempo restante: {timeLeft}s</div>
-          {showExplanation && <div className="text-slate-700 mb-2">{explanation}</div>}
-          {showNextButton && (
-            <button onClick={nextQuestion} className="bg-green-500 text-white px-4 py-2 rounded-lg mt-2">
+          <div className="text-lg mb-2">⏳ Tiempo: {timeLeft}s</div>
+          {showExplanation && (
+            <div className="text-slate-700 mb-2">
+              {currentProblem.explanation}
+            </div>
+          )}
+          {showNext && (
+            <button
+              onClick={nextQuestion}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg mt-2"
+            >
               Siguiente
             </button>
           )}
-          <div className={`text-lg font-bold mt-2 ${feedbackColor}`}>{feedback}</div>
-          <div className="text-slate-700 mt-2">Pregunta {currentQuestionNumber + 1} / {totalQuestions}</div>
+          <div className={`text-lg font-bold mt-3 ${feedbackColor}`}>
+            {feedback}
+          </div>
+          <div className="text-slate-700 mt-2">
+            Pregunta {currentQuestion + 1} / {totalQuestions}
+          </div>
         </div>
       )}
 
-      {/* FIN */}
-      {screen === 'end' && (
-        <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl text-center">
-          <h2 className="text-2xl font-bold mb-4">¡Juego Terminado!</h2>
-          <p className="text-lg mb-4">Tu puntaje: {score} / {totalQuestions}</p>
-          <button onClick={() => setScreen('modeSelection')} className="bg-gray-500 text-white px-4 py-2 rounded-lg">Menú</button>
+      {/* --- PANTALLA FINAL --- */}
+      {screen === "end" && (
+        <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+          <h2 className="text-2xl font-bold mb-3">🎯 Resultado final</h2>
+          <p className="text-lg mb-4">
+            Tu puntaje: {score} / {totalQuestions}
+          </p>
+          <button
+            onClick={() => setScreen("modeSelection")}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg"
+          >
+            Volver al menú
+          </button>
         </div>
       )}
     </div>

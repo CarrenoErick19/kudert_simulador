@@ -43,3 +43,13 @@ Click Finish.
 Android Studio generará un APK firmado en:
 
 kudert-app/android/app/release/app-release.apk
+
+
+
+
+29 de octubre 
+
+personalidad = ok
+
+correcto incorrecto = 17/25
+multiple= 15/25
