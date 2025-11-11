@@ -6,8 +6,6 @@ const ALPHABETS = {
   ES: "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split(""),
 };
 
-const TIME_LIMIT = 7;
-
 export default function SeriesLetras() {
   const navigate = useNavigate();
 
@@ -24,7 +22,7 @@ export default function SeriesLetras() {
   const [feedbackColor, setFeedbackColor] = useState("");
   const [showNext, setShowNext] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [timeLeft, setTimeLeft] = useState(7);
   const timerRef = useRef(null);
   const [questionsInput, setQuestionsInput] = useState(10);
   const [showInstructivo, setShowInstructivo] = useState(false);
@@ -41,7 +39,6 @@ export default function SeriesLetras() {
 
   // --- GENERADORES DE PROBLEMAS ---
   const problemGenerators = {
-    // 🔹 Serie aritmética (ascendente)
     arithmetic: (alphabet) => {
       const step = Math.floor(Math.random() * 3) + 2;
       const start = Math.floor(Math.random() * (alphabet.length - step * 5));
@@ -55,8 +52,6 @@ export default function SeriesLetras() {
         explanation: `Serie aritmética con salto +${step}.`,
       };
     },
-
-    // 🔹 Serie decreciente
     decreasing: (alphabet) => {
       const step = Math.floor(Math.random() * 3) + 2;
       const start = Math.floor(Math.random() * (alphabet.length - 5)) + 6;
@@ -70,8 +65,6 @@ export default function SeriesLetras() {
         explanation: `Serie decreciente con salto -${step}.`,
       };
     },
-
-    // 🔹 Serie alternante (+a, +b)
     alternating: (alphabet) => {
       const step1 = Math.floor(Math.random() * 2) + 2;
       const step2 = Math.floor(Math.random() * 2) + 3;
@@ -88,8 +81,6 @@ export default function SeriesLetras() {
         explanation: `Serie alternante (+${step1}, +${step2}).`,
       };
     },
-
-    // 🔹 Incremento variable (+1, +2, +3...)
     variableIncrement: (alphabet) => {
       let idx = Math.floor(Math.random() * 10) + 1;
       const series = [];
@@ -104,8 +95,6 @@ export default function SeriesLetras() {
         explanation: "Serie con incremento variable (+1, +2, +3...).",
       };
     },
-
-    // 🔹 Serie intercalada (dos subseries alternas)
     interleavedSeries: (alphabet) => {
       const stepA = Math.floor(Math.random() * 2) + 2;
       const stepB = Math.floor(Math.random() * 2) + 2;
@@ -131,8 +120,6 @@ export default function SeriesLetras() {
         explanation: `Serie intercalada con dos subseries (+${stepA}, +${stepB}).`,
       };
     },
-
-    // 🔹 Serie doble (dos letras en paralelo)
     pairedSeries: (alphabet) => {
       const step1 = Math.floor(Math.random() * 3) + 2;
       const step2 = Math.floor(Math.random() * 3) + 2;
@@ -154,8 +141,6 @@ export default function SeriesLetras() {
         explanation: `Serie doble con dos subseries paralelas.`,
       };
     },
-
-    // 🔹 Serie descendente en pares
     descendingPairs: (alphabet) => {
       let idx = Math.floor(Math.random() * (alphabet.length - 10)) + 10;
       const series = [];
@@ -206,9 +191,12 @@ export default function SeriesLetras() {
       if (difficulty === "easy")
         availableGenerators = ["arithmetic", "decreasing"];
       else if (difficulty === "medium")
-        availableGenerators = ["alternating", "variableIncrement", "interleavedSeries"];
-      else
-        availableGenerators = ["pairedSeries", "descendingPairs"];
+        availableGenerators = [
+          "alternating",
+          "variableIncrement",
+          "interleavedSeries",
+        ];
+      else availableGenerators = ["pairedSeries", "descendingPairs"];
     }
 
     const randomKey =
@@ -224,7 +212,11 @@ export default function SeriesLetras() {
       series: problem.series.join(", "),
     });
 
-    setTimeLeft(TIME_LIMIT);
+    // --- Tiempo según dificultad ---
+    const newTime =
+      difficulty === "easy" ? 15 : difficulty === "medium" ? 10 : 6;
+    setTimeLeft(newTime);
+
     setFeedback("");
     setFeedbackColor("");
     setShowNext(false);
@@ -336,7 +328,9 @@ export default function SeriesLetras() {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-white w-11/12 md:w-3/4 lg:w-2/3 h-4/5 rounded shadow-lg flex flex-col">
             <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="text-xl font-bold">Instructivo Series de Letras</h2>
+              <h2 className="text-xl font-bold">
+                Instructivo Series de Letras
+              </h2>
               <button
                 onClick={() => setShowInstructivo(false)}
                 className="bg-red-500 text-white px-3 py-1 rounded-lg"
@@ -400,7 +394,24 @@ export default function SeriesLetras() {
       {/* --- PANTALLA DE JUEGO --- */}
       {screen === "game" && currentProblem && (
         <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl text-center">
-          <div className="text-xl mb-4">{currentProblem.series}</div>
+          {/* Mostrar numeración si es modo fácil o medio */}
+          <div className="text-xl mb-4">
+            {currentProblem.series}
+            {(difficulty === "easy" || difficulty === "medium") && (
+              <div className="text-sm text-gray-500 mt-2">
+                {currentProblem.series
+                  .split(",")
+                  .map(
+                    (l) =>
+                      `${l.trim()} = ${
+                        ALPHABETS[alphabetType].indexOf(l.trim()) + 1
+                      }`
+                  )
+                  .join(" | ")}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3 mb-4">
             {currentProblem.options.map((opt, i) => (
               <button
@@ -412,6 +423,7 @@ export default function SeriesLetras() {
               </button>
             ))}
           </div>
+
           <div className="text-lg mb-2">⏳ Tiempo: {timeLeft}s</div>
           {showExplanation && (
             <div className="text-slate-700 mb-2">
@@ -439,8 +451,12 @@ export default function SeriesLetras() {
       {screen === "end" && (
         <div className="bg-white p-6 rounded-xl shadow-lg text-center">
           <h2 className="text-2xl font-bold mb-3">🎯 Resultado final</h2>
-          <p className="text-lg mb-4">
-            Tu puntaje: {score} / {totalQuestions}
+          <p className="text-lg mb-2">
+            Puntaje: {score} / {totalQuestions}
+          </p>
+          <p className="text-lg mb-4 text-indigo-600 font-semibold">
+            Porcentaje de aciertos:{" "}
+            {((score / totalQuestions) * 100).toFixed(1)}%
           </p>
           <button
             onClick={() => setScreen("modeSelection")}
