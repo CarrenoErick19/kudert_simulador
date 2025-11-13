@@ -37,11 +37,12 @@ export default function SeriesLetras() {
     return alphabet[adjusted];
   };
 
-  // --- GENERADORES DE PROBLEMAS ---
+  // --- NUEVOS GENERADORES DE PROBLEMAS ---
   const problemGenerators = {
-    arithmetic: (alphabet) => {
-      const step = Math.floor(Math.random() * 3) + 2;
-      const start = Math.floor(Math.random() * (alphabet.length - step * 5));
+    // ------- FÁCIL -------
+    simpleAsc: (alphabet) => {
+      const step = Math.floor(Math.random() * 2) + 1;
+      const start = Math.floor(Math.random() * (alphabet.length - 6));
       const series = Array.from({ length: 5 }, (_, i) =>
         getLetter(start + i * step + 1, alphabet)
       );
@@ -49,12 +50,12 @@ export default function SeriesLetras() {
       return {
         series,
         answer,
-        explanation: `Serie aritmética con salto +${step}.`,
+        explanation: `Serie ascendente con paso +${step}.`,
       };
     },
-    decreasing: (alphabet) => {
-      const step = Math.floor(Math.random() * 3) + 2;
-      const start = Math.floor(Math.random() * (alphabet.length - 5)) + 6;
+    simpleDesc: (alphabet) => {
+      const step = Math.floor(Math.random() * 2) + 1;
+      const start = Math.floor(Math.random() * (alphabet.length - 6)) + 6;
       const series = Array.from({ length: 5 }, (_, i) =>
         getLetter(start - i * step, alphabet)
       );
@@ -62,9 +63,26 @@ export default function SeriesLetras() {
       return {
         series,
         answer,
-        explanation: `Serie decreciente con salto -${step}.`,
+        explanation: `Serie descendente con paso -${step}.`,
       };
     },
+    repeatPattern: (alphabet) => {
+      const step = Math.floor(Math.random() * 2) + 1;
+      const start = Math.floor(Math.random() * (alphabet.length - 6));
+      const letters = [];
+      for (let i = 0; i < 5; i++) {
+        const base = getLetter(start + Math.floor(i / 2) * step + 1, alphabet);
+        letters.push(base);
+      }
+      const answer = getLetter(start + Math.ceil(5 / 2) * step + 1, alphabet);
+      return {
+        series: letters,
+        answer,
+        explanation: `Serie repetitiva por pares con incremento +${step}.`,
+      };
+    },
+
+    // ------- MEDIO -------
     alternating: (alphabet) => {
       const step1 = Math.floor(Math.random() * 2) + 2;
       const step2 = Math.floor(Math.random() * 2) + 3;
@@ -81,23 +99,9 @@ export default function SeriesLetras() {
         explanation: `Serie alternante (+${step1}, +${step2}).`,
       };
     },
-    variableIncrement: (alphabet) => {
-      let idx = Math.floor(Math.random() * 10) + 1;
-      const series = [];
-      for (let i = 0; i < 5; i++) {
-        series.push(getLetter(idx, alphabet));
-        idx += i + 1;
-      }
-      const answer = getLetter(idx, alphabet);
-      return {
-        series,
-        answer,
-        explanation: "Serie con incremento variable (+1, +2, +3...).",
-      };
-    },
-    interleavedSeries: (alphabet) => {
-      const stepA = Math.floor(Math.random() * 2) + 2;
-      const stepB = Math.floor(Math.random() * 2) + 2;
+    interleaved: (alphabet) => {
+      const stepA = 2;
+      const stepB = 3;
       let startA = Math.floor(Math.random() * 10) + 1;
       let startB = Math.floor(Math.random() * 10) + 1;
       const series = [];
@@ -117,43 +121,72 @@ export default function SeriesLetras() {
       return {
         series,
         answer,
-        explanation: `Serie intercalada con dos subseries (+${stepA}, +${stepB}).`,
+        explanation: "Serie intercalada con dos subseries distintas.",
       };
     },
-    pairedSeries: (alphabet) => {
-      const step1 = Math.floor(Math.random() * 3) + 2;
-      const step2 = Math.floor(Math.random() * 3) + 2;
-      let start1 = Math.floor(Math.random() * 10) + 1;
-      let start2 = Math.floor(Math.random() * 10) + 1;
+    mirror: (alphabet) => {
+      const start = Math.floor(Math.random() * 10);
+      const step = Math.floor(Math.random() * 2) + 1;
+      const letters = [
+        getLetter(start + 1, alphabet),
+        getLetter(start + 1 + step, alphabet),
+        getLetter(start + 1 + 2 * step, alphabet),
+      ];
+      const mirrored = [...letters, ...letters.slice(0, -1).reverse()];
+      const answer = getLetter(start + 1, alphabet);
+      return {
+        series: mirrored,
+        answer,
+        explanation: "Serie simétrica (efecto espejo).",
+      };
+    },
+
+    // ------- DIFÍCIL -------
+    doublePairs: (alphabet) => {
+      const step = Math.floor(Math.random() * 3) + 1;
+      let start = Math.floor(Math.random() * 10) + 1;
       const series = [];
-      for (let i = 0; i < 3; i++) {
-        series.push(
-          getLetter(start1, alphabet) + getLetter(start2, alphabet)
+      const visualPairs = [];
+      for (let i = 0; i < 4; i++) {
+        const first = getLetter(start, alphabet);
+        const second = getLetter(start + step, alphabet);
+        series.push(first + second);
+        visualPairs.push(
+          `${first}${second} = ${alphabet.indexOf(first) + 1};${
+            alphabet.indexOf(second) + 1
+          }`
         );
-        start1 += step1;
-        start2 += step2;
+        start += step;
       }
       const answer =
-        getLetter(start1, alphabet) + getLetter(start2, alphabet);
+        getLetter(start, alphabet) + getLetter(start + step, alphabet);
       return {
         series,
         answer,
-        explanation: `Serie doble con dos subseries paralelas.`,
+        visualPairs,
+        explanation: "Serie de pares con incremento doble.",
       };
     },
     descendingPairs: (alphabet) => {
       let idx = Math.floor(Math.random() * (alphabet.length - 10)) + 10;
       const series = [];
+      const visualPairs = [];
       for (let i = 0; i < 4; i++) {
         const first = getLetter(idx - i * 2, alphabet);
         const second = getLetter(idx - i * 2 - 1, alphabet);
         series.push(first + second);
+        visualPairs.push(
+          `${first}${second} = ${alphabet.indexOf(first) + 1};${
+            alphabet.indexOf(second) + 1
+          }`
+        );
       }
       const answer =
         getLetter(idx - 8, alphabet) + getLetter(idx - 9, alphabet);
       return {
         series,
         answer,
+        visualPairs,
         explanation: "Serie descendente en pares consecutivos.",
       };
     },
@@ -180,43 +213,69 @@ export default function SeriesLetras() {
     return Array.from(options).sort(() => Math.random() - 0.5);
   };
 
-  // --- GENERAR NUEVO PROBLEMA SEGÚN DIFICULTAD ---
+  // --- GENERAR NUEVO PROBLEMA ---
   const generateNewProblem = () => {
     const alphabet = ALPHABETS[alphabetType];
-    let availableGenerators = [];
+    let pool = [];
+    let time = 6;
+    let showVisuals = false;
 
     if (gameMode === "realistic") {
-      availableGenerators = Object.keys(problemGenerators);
+      // Proporción 20% fácil, 40% medio, 40% difícil
+      const easy = ["simpleAsc", "simpleDesc", "repeatPattern"];
+      const medium = ["alternating", "interleaved", "mirror"];
+      const hard = ["doublePairs", "descendingPairs"];
+      const rand = Math.random();
+      if (rand < 0.2) pool = easy;
+      else if (rand < 0.6) pool = medium;
+      else pool = hard;
+      time = 6;
+      showVisuals = false;
     } else {
-      if (difficulty === "easy")
-        availableGenerators = ["arithmetic", "decreasing"];
-      else if (difficulty === "medium")
-        availableGenerators = [
-          "alternating",
-          "variableIncrement",
-          "interleavedSeries",
-        ];
-      else availableGenerators = ["pairedSeries", "descendingPairs"];
+      // Modos de práctica
+      switch (difficulty) {
+        case "easy":
+          pool = ["simpleAsc", "simpleDesc", "repeatPattern"];
+          time = 10;
+          showVisuals = true;
+          break;
+        case "medium":
+          pool = ["alternating", "interleaved", "mirror"];
+          time = 8;
+          showVisuals = true;
+          break;
+        case "hard":
+          pool =
+            Math.random() < 0.8
+              ? ["doublePairs", "descendingPairs"]
+              : ["alternating", "mirror"];
+          time = 6;
+          showVisuals = true;
+          break;
+        case "expert":
+          const rand = Math.random();
+          if (rand < 0.2)
+            pool = ["simpleAsc", "simpleDesc", "repeatPattern"];
+          else if (rand < 0.6)
+            pool = ["alternating", "interleaved", "mirror"];
+          else pool = ["doublePairs", "descendingPairs"];
+          time = 6;
+          showVisuals = true;
+          break;
+      }
     }
 
-    const randomKey =
-      availableGenerators[
-        Math.floor(Math.random() * availableGenerators.length)
-      ];
-
-    const problem = problemGenerators[randomKey](alphabet);
+    const generator =
+      problemGenerators[pool[Math.floor(Math.random() * pool.length)]];
+    const problem = generator(alphabet);
     const options = generateOptions(problem.answer, alphabet);
     setCurrentProblem({
       ...problem,
       options,
       series: problem.series.join(", "),
+      showVisuals,
     });
-
-    // --- Tiempo según dificultad ---
-    const newTime =
-      difficulty === "easy" ? 15 : difficulty === "medium" ? 10 : 6;
-    setTimeLeft(newTime);
-
+    setTimeLeft(time);
     setFeedback("");
     setFeedbackColor("");
     setShowNext(false);
@@ -245,9 +304,7 @@ export default function SeriesLetras() {
   const handleAnswer = (option) => {
     clearInterval(timerRef.current);
     if (!currentProblem) return;
-
     const correct = option === currentProblem.answer;
-
     if (correct) {
       setScore((s) => s + 1);
       setFeedback("✅ ¡Correcto!");
@@ -260,15 +317,13 @@ export default function SeriesLetras() {
       );
       setFeedbackColor("text-red-600");
     }
-
     if (gameMode === "practice") setShowExplanation(true);
     setShowNext(true);
   };
 
   const nextQuestion = () => {
-    if (currentQuestion + 1 >= totalQuestions) {
-      setScreen("end");
-    } else {
+    if (currentQuestion + 1 >= totalQuestions) setScreen("end");
+    else {
       setCurrentQuestion((q) => q + 1);
       generateNewProblem();
     }
@@ -334,9 +389,7 @@ export default function SeriesLetras() {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-white w-11/12 md:w-3/4 lg:w-2/3 h-4/5 rounded shadow-lg flex flex-col">
             <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="text-xl font-bold">
-                Instructivo Series de Letras
-              </h2>
+              <h2 className="text-xl font-bold">Instructivo Series de Letras</h2>
               <button
                 onClick={() => setShowInstructivo(false)}
                 className="bg-red-500 text-white px-3 py-1 rounded-lg"
@@ -364,6 +417,7 @@ export default function SeriesLetras() {
                   <option value="easy">Fácil</option>
                   <option value="medium">Media</option>
                   <option value="hard">Difícil</option>
+                  <option value="expert">Experto</option>
                 </select>
               </div>
               <div>
@@ -400,20 +454,21 @@ export default function SeriesLetras() {
       {/* --- PANTALLA DE JUEGO --- */}
       {screen === "game" && currentProblem && (
         <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl text-center">
-          {/* Mostrar numeración si es modo fácil o medio */}
           <div className="text-xl mb-4">
             {currentProblem.series}
-            {(difficulty === "easy" || difficulty === "medium") && (
+            {currentProblem.showVisuals && (
               <div className="text-sm text-gray-500 mt-2">
-                {currentProblem.series
-                  .split(",")
-                  .map(
-                    (l) =>
-                      `${l.trim()} = ${
-                        ALPHABETS[alphabetType].indexOf(l.trim()) + 1
-                      }`
-                  )
-                  .join(" | ")}
+                {currentProblem.visualPairs
+                  ? currentProblem.visualPairs.join(" | ")
+                  : currentProblem.series
+                      .split(",")
+                      .map(
+                        (l) =>
+                          `${l.trim()} = ${
+                            ALPHABETS[alphabetType].indexOf(l.trim()[0]) + 1
+                          }`
+                      )
+                      .join(" | ")}
               </div>
             )}
           </div>
@@ -453,7 +508,7 @@ export default function SeriesLetras() {
         </div>
       )}
 
-      {/* --- PANTALLA FINAL --- */}
+      {/* --- RESULTADO FINAL --- */}
       {screen === "end" && (
         <div className="bg-white p-6 rounded-xl shadow-lg text-center">
           <h2 className="text-2xl font-bold mb-3">🎯 Resultado final</h2>
