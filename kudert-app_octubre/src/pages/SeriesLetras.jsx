@@ -375,6 +375,12 @@ export default function SeriesLetras() {
           >
             📘 Instructivo
           </button>
+          <button
+            onClick={() => navigate("/entrenamiento")}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg"
+          >
+            🔤 Entrenamiento ABC
+          </button>
         </div>
       )}
 
