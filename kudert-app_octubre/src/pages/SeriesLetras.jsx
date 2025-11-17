@@ -37,12 +37,14 @@ export default function SeriesLetras() {
     return alphabet[adjusted];
   };
 
-  // --- NUEVOS GENERADORES DE PROBLEMAS ---
+  // --- GENERADORES DE PROBLEMAS (Modificados) ---
   const problemGenerators = {
-    // ------- FÁCIL -------
+    // ------- FÁCIL (Modificado: Paso mínimo es 2) -------
     simpleAsc: (alphabet) => {
-      const step = Math.floor(Math.random() * 2) + 1;
-      const start = Math.floor(Math.random() * (alphabet.length - 6));
+      // ANTES: Math.floor(Math.random() * 2) + 1; (Daba 1 o 2)
+      // AHORA: Math.floor(Math.random() * 2) + 2; (Da 2 o 3) -> Elimina paso +1
+      const step = Math.floor(Math.random() * 2) + 2;
+      const start = Math.floor(Math.random() * (alphabet.length - 10)); 
       const series = Array.from({ length: 5 }, (_, i) =>
         getLetter(start + i * step + 1, alphabet)
       );
@@ -54,8 +56,10 @@ export default function SeriesLetras() {
       };
     },
     simpleDesc: (alphabet) => {
-      const step = Math.floor(Math.random() * 2) + 1;
-      const start = Math.floor(Math.random() * (alphabet.length - 6)) + 6;
+      // ANTES: Math.floor(Math.random() * 2) + 1;
+      // AHORA: Math.floor(Math.random() * 2) + 2; -> Elimina paso -1
+      const step = Math.floor(Math.random() * 2) + 2;
+      const start = Math.floor(Math.random() * (alphabet.length - 6)) + 10;
       const series = Array.from({ length: 5 }, (_, i) =>
         getLetter(start - i * step, alphabet)
       );
@@ -67,8 +71,10 @@ export default function SeriesLetras() {
       };
     },
     repeatPattern: (alphabet) => {
-      const step = Math.floor(Math.random() * 2) + 1;
-      const start = Math.floor(Math.random() * (alphabet.length - 6));
+      // ANTES: Math.floor(Math.random() * 2) + 1;
+      // AHORA: Math.floor(Math.random() * 2) + 2; -> Elimina incremento +1
+      const step = Math.floor(Math.random() * 2) + 2;
+      const start = Math.floor(Math.random() * (alphabet.length - 8));
       const letters = [];
       for (let i = 0; i < 5; i++) {
         const base = getLetter(start + Math.floor(i / 2) * step + 1, alphabet);
@@ -82,7 +88,7 @@ export default function SeriesLetras() {
       };
     },
 
-    // ------- MEDIO -------
+    // ------- MEDIO (Sin mirror) -------
     alternating: (alphabet) => {
       const step1 = Math.floor(Math.random() * 2) + 2;
       const step2 = Math.floor(Math.random() * 2) + 3;
@@ -124,22 +130,7 @@ export default function SeriesLetras() {
         explanation: "Serie intercalada con dos subseries distintas.",
       };
     },
-    mirror: (alphabet) => {
-      const start = Math.floor(Math.random() * 10);
-      const step = Math.floor(Math.random() * 2) + 1;
-      const letters = [
-        getLetter(start + 1, alphabet),
-        getLetter(start + 1 + step, alphabet),
-        getLetter(start + 1 + 2 * step, alphabet),
-      ];
-      const mirrored = [...letters, ...letters.slice(0, -1).reverse()];
-      const answer = getLetter(start + 1, alphabet);
-      return {
-        series: mirrored,
-        answer,
-        explanation: "Serie simétrica (efecto espejo).",
-      };
-    },
+    // mirror ELIMINADO COMPLETAMENTE
 
     // ------- DIFÍCIL -------
     doublePairs: (alphabet) => {
@@ -213,7 +204,7 @@ export default function SeriesLetras() {
     return Array.from(options).sort(() => Math.random() - 0.5);
   };
 
-  // --- GENERAR NUEVO PROBLEMA ---
+  // --- GENERAR NUEVO PROBLEMA (POOLS ACTUALIZADOS) ---
   const generateNewProblem = () => {
     const alphabet = ALPHABETS[alphabetType];
     let pool = [];
@@ -221,9 +212,9 @@ export default function SeriesLetras() {
     let showVisuals = false;
 
     if (gameMode === "realistic") {
-      // Proporción 20% fácil, 40% medio, 40% difícil
       const easy = ["simpleAsc", "simpleDesc", "repeatPattern"];
-      const medium = ["alternating", "interleaved", "mirror"];
+      // Se eliminó "mirror" de medium
+      const medium = ["alternating", "interleaved"]; 
       const hard = ["doublePairs", "descendingPairs"];
       const rand = Math.random();
       if (rand < 0.2) pool = easy;
@@ -232,7 +223,6 @@ export default function SeriesLetras() {
       time = 6;
       showVisuals = false;
     } else {
-      // Modos de práctica
       switch (difficulty) {
         case "easy":
           pool = ["simpleAsc", "simpleDesc", "repeatPattern"];
@@ -240,15 +230,17 @@ export default function SeriesLetras() {
           showVisuals = true;
           break;
         case "medium":
-          pool = ["alternating", "interleaved", "mirror"];
+          // Se eliminó "mirror"
+          pool = ["alternating", "interleaved"];
           time = 8;
           showVisuals = true;
           break;
         case "hard":
+          // Se eliminó "mirror"
           pool =
             Math.random() < 0.8
               ? ["doublePairs", "descendingPairs"]
-              : ["alternating", "mirror"];
+              : ["alternating"];
           time = 6;
           showVisuals = true;
           break;
@@ -257,7 +249,8 @@ export default function SeriesLetras() {
           if (rand < 0.2)
             pool = ["simpleAsc", "simpleDesc", "repeatPattern"];
           else if (rand < 0.6)
-            pool = ["alternating", "interleaved", "mirror"];
+            // Se eliminó "mirror"
+            pool = ["alternating", "interleaved"];
           else pool = ["doublePairs", "descendingPairs"];
           time = 6;
           showVisuals = true;
