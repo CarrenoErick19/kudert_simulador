@@ -5,7 +5,6 @@ import SeriesLetras from './pages/SeriesLetras';
 import SeriesNumeros from './pages/SeriesNumeros';
 import Razonamiento from './pages/Razonamiento';
 import Personalidad from './pages/Personalidad';
-import Entrenamiento from './pages/Entrenamiento'; // 👈 Nuevo import 12 noviembre
 
 export default function App() {
   return (
@@ -16,7 +15,6 @@ export default function App() {
       <Route path="/series-numeros" element={<SeriesNumeros />} />
       <Route path="/razonamiento" element={<Razonamiento />} />
       <Route path="/personalidad" element={<Personalidad />} />
-      <Route path="/entrenamiento" element={<Entrenamiento />} /> {/* 👈 Nueva ruta */}
     </Routes>
   );
 }
