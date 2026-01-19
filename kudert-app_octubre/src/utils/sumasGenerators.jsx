@@ -6,7 +6,7 @@ const randInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
 export const generateExercise = () => {
-  const numCount = Math.random() < 0.5 ? 2 : 3;
+  const numCount = Math.random() < 0.5 ? 4 : 3;
   const nums = Array.from({ length: numCount }, getRandomThreeDigit);
   const sum = nums.reduce((a, b) => a + b, 0);
   return { nums, sum };
