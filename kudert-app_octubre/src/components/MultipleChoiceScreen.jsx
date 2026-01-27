@@ -5,7 +5,7 @@ import ResultsScreen from "./ResultsScreen";
 import { generateMultipleChoiceSet } from "../utils/sumasGenerators";
 
 export default function MultipleChoiceScreen({ onBack, total }) {
-  const TIME = 6;
+  const TIME = 8;
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);
   const [time, setTime] = useState(TIME);

@@ -1,551 +1,508 @@
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
 
-/**
- * Razonamiento.jsx
- *
- * - Modo: práctica configurable (elige cantidad de ejercicios).
- * - Temporizador: 6s por ejercicio; si llega a 0 se registra como INCORRECTA automáticamente.
- * - Incluye plantillas "PDF-like" (rotaciones, matrices/combos, movimiento circular) + variaciones generadas.
- *
- * Copiar/pegar completo en tu archivo Razonamiento.jsx
- */
+// ==========================================
+// COMPONENTES GRÁFICOS (SVG)
+// ==========================================
 
-// ================== UTILIDADES SVG ==================
-const Heart = ({ x = 50, y = 50, size = 28, fill = "black", rotate = 0 }) => {
-  // Heart path scaled and translated
-  const s = size / 50;
-  const transform = `translate(${x - 50}, ${y - 50}) scale(${s}) rotate(${rotate},50,50)`;
-  return (
-    <g transform={transform}>
-      <path
-        d="M50 77 L20 45 A15 15 0 0 1 50 25 A15 15 0 0 1 80 45 Z"
-        fill={fill}
-        stroke="black"
-        strokeWidth="2"
-      />
-    </g>
-  );
-};
+// Renderiza una figura base según el tipo
+const Shape = ({ type, x, y, size, fill, rotate = 0, stroke = "black", sides = 3 }) => {
+  const transform = `translate(${x}, ${y}) rotate(${rotate})`;
+  const s = size / 2; // radio aproximado
 
-const PolygonShape = ({ sides = 3, x = 50, y = 50, size = 30, fill = "white", rotate = 0 }) => {
-  const angle = (2 * Math.PI) / sides;
-  const points = Array.from({ length: sides })
-    .map((_, i) => {
-      const px = x + size * Math.cos(i * angle - Math.PI / 2 + (rotate * Math.PI) / 180);
-      const py = y + size * Math.sin(i * angle - Math.PI / 2 + (rotate * Math.PI) / 180);
-      return `${px},${py}`;
-    })
-    .join(" ");
-  return <polygon points={points} fill={fill} stroke="black" strokeWidth="2" />;
-};
-
-const Face = ({ x = 50, y = 50, size = 38, rotate = 0 }) => {
-  const transform = `translate(${x - 50}, ${y - 50}) rotate(${rotate},50,50)`;
-  return (
-    <g transform={transform}>
-      <circle cx="50" cy="50" r={size} fill="#ffe7b8" stroke="black" strokeWidth="2" />
-      <circle cx="40" cy="45" r="4" fill="black" />
-      <circle cx="60" cy="45" r="4" fill="black" />
-      <path d="M40 62 Q50 70 60 62" stroke="black" strokeWidth="2" fill="none" />
-    </g>
-  );
-};
-
-// ================== GENERADORES / PLANTILLAS (PDF-like) ==================
-/**
- * Cada plantilla devuelve:
- * {
- *   renderMain: () => JSX (SVG main sequence shown to user),
- *   correctIndex: number (index 0..3),
- *   renderOption(i): JSX (SVG option i),
- *   explanation: string
- * }
- *
- * We'll implement 3 plantillas: Rotaciones+corazones, Matriz combinación, Movimiento circular.
- */
-
-// Helper random
-const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-// Shuffle
-const shuffle = (arr) => {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  let content;
+  switch (type) {
+    case "circle":
+      content = <circle cx="0" cy="0" r={s} fill={fill} stroke={stroke} strokeWidth="2" />;
+      break;
+    case "square":
+      content = <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={fill} stroke={stroke} strokeWidth="2" />;
+      break;
+    case "polygon": // Para lógica de lados dinámicos
+    case "triangle":
+    case "pentagon":
+    case "hexagon":
+      const polySides = type === "triangle" ? 3 : type === "square" ? 4 : type === "pentagon" ? 5 : type === "hexagon" ? 6 : sides;
+      const angleStep = (2 * Math.PI) / polySides;
+      const points = Array.from({ length: polySides }).map((_, i) => {
+        const ang = i * angleStep - Math.PI / 2; // Empezar arriba
+        return `${Math.cos(ang) * s},${Math.sin(ang) * s}`;
+      }).join(" ");
+      content = <polygon points={points} fill={fill} stroke={stroke} strokeWidth="2" />;
+      break;
+    case "cross":
+      content = (
+        <g stroke={stroke} strokeWidth="3">
+          <line x1={-s} y1="0" x2={s} y2="0" />
+          <line x1="0" y1={-s} x2="0" y2={s} />
+        </g>
+      );
+      break;
+    case "arrow":
+      content = (
+         <path d={`M -${s/2} ${s} L 0 -${s} L ${s/2} ${s} M 0 -${s} L 0 ${s}`} fill="none" stroke={stroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      );
+      break;
+    default:
+      content = <circle cx="0" cy="0" r={s} fill={fill} />;
   }
-  return a;
+
+  return <g transform={transform}>{content}</g>;
 };
 
-// 1) Rotación + corazones (Ejemplo 2 parecido)
-const templateRotationHearts = (seed = {}) => {
-  // seed: rotation direction and heart color pattern
-  const startRot = seed.startRot ?? rand(0, 90); // starting face rotation degrees
-  const step = seed.step ?? (Math.random() > 0.5 ? 90 : 45); // rotation step
-  const dir = seed.dir ?? (Math.random() > 0.5 ? 1 : -1);
-  const heartPositions = seed.heartPositions ?? [
-    { x: 30, y: 30, color: "black" },
-    { x: 70, y: 30, color: "white" },
-    { x: 30, y: 70, color: "black" },
-  ];
-  // Sequence: show 3 panels (rotating face) + hearts moving positions (pattern)
-  // correct is the next rotation + expected heart positions combination
-  const correctRot = startRot + dir * step * 3;
-  const correctHearts = heartPositions.map((p) => {
-    // shift each heart one place clockwise (simulated pattern)
-    return { x: p.x === 30 ? 70 : 30, y: p.y, color: p.color };
-  });
+// ==========================================
+// MOTORES DE LÓGICA (GENERADORES)
+// ==========================================
 
-  // options: create 4 candidates combining rotations and heart positions
-  const options = [];
-  // option A: correct
-  options.push({ rot: correctRot, hearts: correctHearts });
-  // option B: rotation correct but hearts different
-  options.push({
-    rot: correctRot,
-    hearts: correctHearts.map((h, i) => ({ ...h, color: h.color === "black" ? "white" : "black" })),
-  });
-  // option C: rotation wrong (repeat previous)
-  options.push({ rot: startRot + dir * step * 1, hearts: correctHearts });
-  // option D: rotation off by step and hearts swapped
-  options.push({
-    rot: correctRot + dir * step,
-    hearts: correctHearts.slice().reverse(),
-  });
+const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-  const ordered = shuffle(options);
-  const correctIndex = ordered.findIndex((o) => o.rot === correctRot && o.hearts[0].x === correctHearts[0].x && o.hearts[0].color === correctHearts[0].color);
+// TIPO 1: MATRIZ DE SUPERPOSICIÓN (Lógica PDF)
+const generateMatrixLogic = () => {
+  const shapeType = pickRandom(["circle", "square", "triangle", "cross"]);
+  
+  // Generar panel A y B aleatorios
+  const panelA = Array(4).fill(0).map(() => Math.random() > 0.5);
+  const panelB = Array(4).fill(0).map(() => Math.random() > 0.5);
+  
+  // Lógica XOR: Si aparece en uno pero no en el otro, se queda.
+  const resultLogic = (a, b) => (a !== b); 
+  const panelC = panelA.map((val, i) => resultLogic(val, panelB[i]));
 
-  return {
-    renderMain: () => (
-      <div className="flex gap-2 items-center">
-        {/* Show 3 panels horizontally as sequence */}
-        {[0, 1, 2].map((i) => (
-          <svg key={i} width="110" height="110" viewBox="0 0 100 100" className="border rounded">
-            <rect x="0" y="0" width="100" height="100" fill="white" />
-            <Face x={50} y={35} size={28} rotate={startRot + dir * step * i} />
-            {/* hearts positions rotate/move slightly */}
-            <Heart x={30 + (i * 10)} y={70} size={18} fill={heartPositions[0].color} rotate={i * 15} />
-            <Heart x={70 - (i * 10)} y={70} size={18} fill={heartPositions[1].color} rotate={-i * 10} />
-          </svg>
-        ))}
-        <div style={{ fontSize: 28, fontWeight: "700" }}>?</div>
-      </div>
-    ),
-    options: ordered.map((opt) => (props) => (
-      <svg width="120" height="120" viewBox="0 0 100 100" className="border rounded">
-        <rect x="0" y="0" width="100" height="100" fill="white" />
-        <Face x={50} y={45} size={32} rotate={opt.rot} />
-        {opt.hearts.map((h, i) => (
-          <Heart key={i} x={h.x} y={h.y} size={12} fill={h.color} />
-        ))}
-      </svg>
-    )),
-    correctIndex,
-    explanation:
-      "Patrón: la cara rota avanza en el mismo sentido y grado de rotación; los corazones se mueven consistentemente (se desplazan). La opción correcta combina la rotación siguiente con la posición esperada de los corazones.",
-  };
-};
+  // Generar opciones incorrectas
+  const generateWrong = () => Array(4).fill(0).map(() => Math.random() > 0.5);
+  let options = [panelC];
+  while (options.length < 4) {
+    const wrong = generateWrong();
+    if (!options.some(o => JSON.stringify(o) === JSON.stringify(wrong))) {
+      options.push(wrong);
+    }
+  }
+  
+  options = options.sort(() => Math.random() - 0.5);
+  const correctIndex = options.findIndex(o => JSON.stringify(o) === JSON.stringify(panelC));
 
-// 2) Matriz / combinación de colores (Ejemplo 1 parecido)
-const templateMatrixCombine = (seed = {}) => {
-  // We'll represent a 2x2 grid where combining color positions produce result
-  const baseColors = seed.baseColors ?? ["black", "white", "red", "blue"];
-  // The rule: combine adjacent cells, but the output cell must have colors that are different from neighbors (as PDF example)
-  // We'll create sequence: first two panels => combined third panel
-  const panelA = ["red", "blue", "white", "black"].map((c) => c);
-  const panelB = ["blue", "red", "black", "white"].map((c) => c);
-  // Correct combined panel: for each position, pick the color that's different from same position in other panel
-  const combined = panelA.map((c, i) => (c === panelB[i] ? c : (c === "white" ? panelB[i] : c)));
-
-  // Build options: one correct, others with swaps
-  const optionsRaw = [
-    combined,
-    combined.slice().reverse(),
-    panelA.slice(),
-    panelB.slice(),
-  ];
-  const options = shuffle(optionsRaw);
-  const correctIndex = options.findIndex((o) => o.join(",") === combined.join(","));
-
-  const renderGrid = (arr) => (
-    <>
-      {/* 2x2 grid */}
-      <rect x="5" y="5" width="90" height="90" fill="white" />
-      <rect x="10" y="10" width="40" height="40" fill={arr[0]} stroke="black" />
-      <rect x="50" y="10" width="40" height="40" fill={arr[1]} stroke="black" />
-      <rect x="10" y="50" width="40" height="40" fill={arr[2]} stroke="black" />
-      <rect x="50" y="50" width="40" height="40" fill={arr[3]} stroke="black" />
-    </>
+  const renderGrid = (data) => (
+    <svg viewBox="0 0 100 100" width="100%" height="100%" className="bg-white border-2 border-gray-300">
+      {data.map((active, i) => {
+        if (!active) return null;
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        return <Shape key={i} type={shapeType} x={25 + col * 50} y={25 + row * 50} size={22} fill="black" />;
+      })}
+    </svg>
   );
 
   return {
     renderMain: () => (
-      <div className="flex gap-2 items-center">
-        <svg width="110" height="110" viewBox="0 0 100 100" className="border rounded">
-          {renderGrid(panelA)}
-        </svg>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>+</div>
-        <svg width="110" height="110" viewBox="0 0 100 100" className="border rounded">
-          {renderGrid(panelB)}
-        </svg>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>=</div>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>?</div>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-sm font-bold text-gray-500 uppercase">Matriz: Superposición</p>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="w-20 h-20 md:w-24 md:h-24">{renderGrid(panelA)}</div>
+          <span className="text-2xl font-bold">+</span>
+          <div className="w-20 h-20 md:w-24 md:h-24">{renderGrid(panelB)}</div>
+          <span className="text-2xl font-bold">=</span>
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-200 flex items-center justify-center text-3xl font-bold">?</div>
+        </div>
       </div>
     ),
-    options: options.map((opt) => (props) => (
-      <svg width="120" height="120" viewBox="0 0 100 100" className="border rounded">
-        {renderGrid(opt)}
-      </svg>
-    )),
+    renderOption: (optIndex) => renderGrid(options[optIndex]),
     correctIndex,
-    explanation:
-      "Patrón: cada celda se combina observando las dos matrices; aquí la combinación produce la celda que no repite color de la misma posición o sigue la regla mostrada en los paneles de ejemplo.",
+    explanation: "Superposición (XOR): Las figuras que se repiten en la misma posición se eliminan; las que están en una sola posición se mantienen.",
   };
 };
 
-// 3) Movimiento circular alrededor (Ejemplo 7 parecido)
-const templateCircularMovement = (seed = {}) => {
-  // small circle orbiting a square; sequence shows orbit positions moving clockwise
-  const startPos = seed.startPos ?? 0; // 0..3 positions (top, right, bottom, left)
-  const dir = seed.dir ?? 1; // clockwise
-  // After three moves, next will be position = startPos + 3*dir
-  const nextPos = (startPos + 3 * dir + 4) % 4;
-  // Options: four positions with one correct
-  const options = [0, 1, 2, 3].map((p) => ({ pos: p }));
-  const ordered = shuffle(options);
-  const correctIndex = ordered.findIndex((o) => o.pos === nextPos);
+// TIPO 2: SECUENCIA DE ROTACIÓN DOBLE (Más dificultad)
+// Un elemento gira horario, otro elemento pequeño gira antihorario.
+const generateDualRotationLogic = () => {
+  const startAngleA = getRandomInt(0, 3) * 90;
+  const startAngleB = getRandomInt(0, 3) * 90;
+  
+  const stepA = 90; // Principal horario
+  const stepB = -90; // Secundario antihorario
 
-  const renderPanel = (posOffset = 0) => {
-    // show the orbiting small circle position after posOffset moves
-    const pos = (startPos + posOffset + 4) % 4;
-    const coords = [
-      { x: 50, y: 20 },
-      { x: 80, y: 50 },
-      { x: 50, y: 80 },
-      { x: 20, y: 50 },
-    ][pos];
-    return (
-      <svg width="100" height="100" viewBox="0 0 100 100" className="border rounded">
-        <rect x="0" y="0" width="100" height="100" fill="white" />
-        <rect x="30" y="30" width="40" height="40" fill="#ddd" stroke="black" />
-        <circle cx={coords.x} cy={coords.y} r="8" fill="black" />
-      </svg>
-    );
+  const seq = [0, 1, 2].map(i => ({
+    rotA: startAngleA + (i * stepA),
+    rotB: startAngleB + (i * stepB)
+  }));
+  
+  const correctState = {
+    rotA: startAngleA + (3 * stepA),
+    rotB: startAngleB + (3 * stepB)
   };
+
+  // Opciones: Correcta, Solo A bien, Solo B bien, Ninguna bien
+  let options = [
+    correctState,
+    { rotA: correctState.rotA + 90, rotB: correctState.rotB },
+    { rotA: correctState.rotA, rotB: correctState.rotB + 90 },
+    { rotA: correctState.rotA + 180, rotB: correctState.rotB + 180 }
+  ];
+  
+  options = options.sort(() => Math.random() - 0.5);
+  const correctIndex = options.findIndex(o => o.rotA === correctState.rotA && o.rotB === correctState.rotB);
+
+  const renderSingle = (state) => (
+    <svg viewBox="0 0 100 100" width="100%" height="100%" className="bg-white border-2 border-gray-300">
+      {/* Figura principal centro */}
+      <Shape type="arrow" x={50} y={50} size={35} rotate={state.rotA} stroke="black" />
+      {/* Figura pequeña orbitando o rotando en esquina */}
+      <g transform={`translate(50, 50) rotate(${state.rotB}) translate(0, -35)`}>
+         <circle r="6" fill="red" />
+      </g>
+    </svg>
+  );
 
   return {
     renderMain: () => (
-      <div className="flex gap-2 items-center">
-        {[0, 1, 2].map((i) => (
-          <div key={i}>{renderPanel(i)}</div>
-        ))}
-        <div style={{ fontSize: 28, fontWeight: 700 }}>?</div>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-sm font-bold text-gray-500 uppercase">Secuencia: Rotación Doble</p>
+        <div className="flex gap-2">
+          {seq.map((s, i) => (
+            <div key={i} className="w-20 h-20 md:w-24 md:h-24">{renderSingle(s)}</div>
+          ))}
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-200 flex items-center justify-center text-3xl font-bold">?</div>
+        </div>
       </div>
     ),
-    options: ordered.map((opt) => (props) => (
-      <svg width="120" height="120" viewBox="0 0 100 100" className="border rounded">
-        <rect x="0" y="0" width="100" height="100" fill="white" />
-        <rect x="20" y="20" width="60" height="60" fill="#eee" stroke="black" />
-        {/* draw candidate pos */}
-        <circle
-          cx={[50, 80, 50, 20][opt.pos]}
-          cy={[20, 50, 80, 50][opt.pos]}
-          r="8"
-          fill="black"
-        />
-      </svg>
-    )),
+    renderOption: (i) => renderSingle(options[i]),
     correctIndex,
-    explanation:
-      "Patrón: el punto gira alrededor del cuadrado en la misma dirección y saltos; la opción correcta coloca el punto en la posición esperada según la secuencia.",
+    explanation: "La flecha gira 90° en sentido horario, mientras el punto rojo gira 90° en sentido antihorario.",
   };
 };
 
-// Factory: return a function that produces a randomized instance of a template (mix of base + variation)
-const allTemplates = [
-  () => templateRotationHearts({ startRot: rand(0, 45), step: Math.random() > 0.5 ? 90 : 45, dir: Math.random() > 0.5 ? 1 : -1 }),
-  () => templateMatrixCombine(),
-  () => templateCircularMovement({ startPos: rand(0, 3), dir: Math.random() > 0.5 ? 1 : -1 }),
-];
+// TIPO 3: SECUENCIA DE LADOS (Nuevo para variedad)
+// Triangulo -> Cuadrado -> Pentágono -> ?
+const generateSidesLogic = () => {
+  const startSides = getRandomInt(3, 4); // Empieza en 3 o 4 lados
+  const seq = [0, 1, 2].map(i => startSides + i);
+  const correctSides = startSides + 3;
 
-// ================== MAIN COMPONENT ==================
+  // Opciones
+  let options = [correctSides, correctSides - 1, correctSides + 1, correctSides - 2];
+  // Asegurar que no haya duplicados raros y mezclar
+  options = Array.from(new Set(options)).sort(() => Math.random() - 0.5);
+  // Si por el Set bajó la cantidad, rellenar
+  while(options.length < 4) options.push(getRandomInt(3,8));
+  
+  const correctIndex = options.findIndex(o => o === correctSides);
+
+  const renderShape = (sides) => (
+    <svg viewBox="0 0 100 100" width="100%" height="100%" className="bg-white border-2 border-gray-300">
+       <Shape type="polygon" sides={sides} x={50} y={50} size={40} fill={sides % 2 === 0 ? "#ddd" : "#333"} stroke="black" />
+       <text x="50" y="90" fontSize="12" textAnchor="middle" fill="#666">{sides} lados</text>
+    </svg>
+  );
+
+  return {
+    renderMain: () => (
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-sm font-bold text-gray-500 uppercase">Secuencia: Conteo de Lados</p>
+        <div className="flex gap-2">
+          {seq.map((s, i) => (
+             <div key={i} className="w-20 h-20 md:w-24 md:h-24">{renderShape(s)}</div>
+          ))}
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-200 flex items-center justify-center text-3xl font-bold">?</div>
+        </div>
+      </div>
+    ),
+    renderOption: (i) => renderShape(options[i]),
+    correctIndex,
+    explanation: "La figura aumenta su número de lados en 1 en cada paso (Secuencia +1).",
+  };
+};
+
+// TIPO 4: SUSTRACCIÓN DE ELEMENTOS (Clásico)
+const generateSubtractionLogic = () => {
+  const stepRemove = getRandomInt(1, 2); 
+  const allAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+  
+  const getLinesForStep = (stepIndex) => {
+    const linesToKeep = Math.max(0, 8 - (stepIndex * stepRemove));
+    return allAngles.slice(0, linesToKeep);
+  };
+
+  const correctLines = getLinesForStep(3);
+  
+  let options = [
+    correctLines,
+    allAngles.slice(0, Math.max(0, correctLines.length - 1)),
+    allAngles.slice(0, Math.min(8, correctLines.length + 1)),
+    [0, 90]
+  ];
+  
+  // Limpieza de opciones
+  const uniqueOptions = [];
+  const map = new Map();
+  for (const item of options) {
+      if(!map.has(item.length)){
+          map.set(item.length, true);
+          uniqueOptions.push(item);
+      }
+  }
+  while(uniqueOptions.length < 4) {
+      const r = getRandomInt(1, 8);
+      if(!map.has(r)) { map.set(r, true); uniqueOptions.push(allAngles.slice(0, r)); }
+  }
+
+  const shuffledOptions = uniqueOptions.sort(() => Math.random() - 0.5);
+  const correctIndex = shuffledOptions.findIndex(o => o.length === correctLines.length);
+
+  const renderLines = (angles) => (
+    <svg viewBox="0 0 100 100" width="100%" height="100%" className="bg-white border-2 border-gray-300">
+      <circle cx="50" cy="50" r="45" fill="#f0f0f0" />
+      {angles.map((a, i) => {
+        const rad = (a * Math.PI) / 180;
+        const x2 = 50 + 40 * Math.cos(rad);
+        const y2 = 50 + 40 * Math.sin(rad);
+        return <line key={i} x1="50" y1="50" x2={x2} y2={y2} stroke="black" strokeWidth="4" strokeLinecap="round" />;
+      })}
+    </svg>
+  );
+
+  return {
+    renderMain: () => (
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-sm font-bold text-gray-500 uppercase">Secuencia: Sustracción</p>
+        <div className="flex gap-2">
+          {[0, 1, 2].map(i => (
+             <div key={i} className="w-20 h-20 md:w-24 md:h-24">{renderLines(getLinesForStep(i))}</div>
+          ))}
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-200 flex items-center justify-center text-3xl font-bold">?</div>
+        </div>
+      </div>
+    ),
+    renderOption: (i) => renderLines(shuffledOptions[i]),
+    correctIndex,
+    explanation: `En cada paso se eliminan ${stepRemove} línea(s) siguiendo el patrón de reducción.`,
+  };
+};
+
+const generators = [generateMatrixLogic, generateDualRotationLogic, generateSidesLogic, generateSubtractionLogic];
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
+
 export default function Razonamiento() {
   const navigate = useNavigate();
-
-  // UI config
-  const [phase, setPhase] = useState("config"); // config | running | finished
-  const [total, setTotal] = useState(8); // default
-  const [seedList, setSeedList] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [templates, setTemplates] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [userTotalQuestions, setUserTotalQuestions] = useState(15); // Estado para config
+  
+  const [exercise, setExercise] = useState(null);
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(6.0);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(10); // Reducido a 10s
+  const [gameOver, setGameOver] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  
   const timerRef = useRef(null);
-  const progressRef = useRef(null);
-  const [autoTaken, setAutoTaken] = useState(false); // if timeout auto-taken
 
-  const currentTemplate = templates[currentIndex];
-
-  // Start run: build a list of exercises (mix of original templates + generated variants)
-  const startRun = () => {
-    // ensure at least one of each PDF-like template appears in the run:
-    const guaranteed = allTemplates.map((f) => f());
-    const remainingCount = Math.max(0, total - guaranteed.length);
-
-    const others = Array.from({ length: remainingCount }).map(() => {
-      const t = allTemplates[Math.floor(Math.random() * allTemplates.length)];
-      return t();
-    });
-
-    const mixed = shuffle([...guaranteed, ...others]).slice(0, total);
-    // For reproducibility we don't need seeds; templates already randomized
-    setTemplates(mixed);
-    setCurrentIndex(0);
-    setScore(0);
-    setSelected(null);
-    setShowExplanation(false);
-    setPhase("running");
-    setTimeLeft(6.0);
-    setAutoTaken(false);
-  };
-
-  // Timer effect per exercise
-  useEffect(() => {
-    if (phase !== "running") {
-      clearInterval(timerRef.current);
+  // Cargar nuevo ejercicio
+  const nextExercise = () => {
+    if (questionCount >= userTotalQuestions) {
+      setGameOver(true);
       return;
     }
-    // reset timer
-    setTimeLeft(6.0);
-    setSelected(null);
+    const gen = pickRandom(generators);
+    setExercise(gen());
+    setQuestionCount(prev => prev + 1);
+    setSelectedOption(null);
     setShowExplanation(false);
-    setAutoTaken(false);
-
-    const start = Date.now();
-    clearInterval(timerRef.current);
+    setTimeLeft(10); // Reinicia a 10s
+    
+    // Reiniciar timer
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      const elapsed = (Date.now() - start) / 1000;
-      const left = Math.max(0, 6 - elapsed);
-      setTimeLeft(parseFloat(left.toFixed(2)));
-      // progress bar handled via left / 6
-      if (left <= 0) {
-        clearInterval(timerRef.current);
-        // mark incorrect automatically
-        if (!autoTaken) {
-          setAutoTaken(true);
-          setSelected("TIMEOUT"); // sentinel
-          setShowExplanation(true);
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleTimeout();
+          return 0;
         }
-      }
-    }, 100);
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-    return () => clearInterval(timerRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, currentIndex]);
+  const handleTimeout = () => {
+    setShowExplanation(true);
+    setSelectedOption(-1); // Estado de timeout
+  };
 
-  // When user selects an option
-  const handleSelect = (i) => {
-    if (!currentTemplate) return;
-    if (selected !== null) return; // already answered
-    setSelected(i);
+  const handleSelect = (idx) => {
+    if (showExplanation) return; // Ya respondió
     clearInterval(timerRef.current);
-
-    if (i === currentTemplate.correctIndex) {
-      setScore((s) => s + 1);
-      setShowExplanation(false);
-    } else {
-      setShowExplanation(true);
+    setSelectedOption(idx);
+    setShowExplanation(true);
+    
+    if (idx === exercise.correctIndex) {
+      setScore(prev => prev + 1);
     }
   };
 
-  // Next exercise (or finish)
-  const handleNext = () => {
-    if (currentIndex + 1 >= templates.length) {
-      setPhase("finished");
+  const exitGame = () => {
       clearInterval(timerRef.current);
-      return;
-    }
-    setCurrentIndex((c) => c + 1);
-    setSelected(null);
-    setShowExplanation(false);
-    setAutoTaken(false);
-    setTimeLeft(6.0);
+      setStarted(false);
+      setGameOver(false);
+      setScore(0);
+      setQuestionCount(0);
   };
 
-  const restart = () => {
-    setPhase("config");
-    setTemplates([]);
-    setCurrentIndex(0);
-    setSelected(null);
-    setShowExplanation(false);
-    setScore(0);
-  };
+  useEffect(() => {
+    return () => clearInterval(timerRef.current);
+  }, []);
 
-  // Progress percentage
-  const progressPct = useMemo(() => {
-    if (phase !== "running") return 0;
-    return Math.round((currentIndex / total) * 100);
-  }, [currentIndex, total, phase]);
-
-  // Render helpers for options grid A-D
-  const renderOptionsGrid = () => {
-    if (!currentTemplate) return null;
+  // Pantalla de Inicio / Configuración
+  if (!started) {
     return (
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        {currentTemplate.options.map((OptionComponent, idx) => {
-          const isCorrect = idx === currentTemplate.correctIndex;
-          const isSelected = selected === idx;
-          const bg =
-            selected === null
-              ? "bg-white"
-              : isCorrect
-              ? "bg-green-200"
-              : isSelected
-              ? "bg-red-200"
-              : "bg-white";
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+          <h1 className="text-3xl font-bold text-slate-800 mb-4">Simulador Abstracto</h1>
+          <p className="text-slate-600 mb-6">
+            Configura tu prueba y entrena tu lógica con patrones, rotaciones y series.
+          </p>
+
+          <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+              <label className="block text-slate-700 font-bold mb-2">
+                  Número de Ejercicios: {userTotalQuestions}
+              </label>
+              <input 
+                  type="range" 
+                  min="5" 
+                  max="30" 
+                  step="5"
+                  value={userTotalQuestions}
+                  onChange={(e) => setUserTotalQuestions(parseInt(e.target.value))}
+                  className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>5</span>
+                  <span>15</span>
+                  <span>30</span>
+              </div>
+          </div>
+
+          <div className="space-y-3">
+            <button 
+                onClick={() => { setStarted(true); setQuestionCount(0); setScore(0); setGameOver(false); setTimeout(nextExercise, 100); }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+            >
+                COMENZAR PRUEBA
+            </button>
+            <button 
+                onClick={() => navigate(-1)}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg transition-colors"
+            >
+                Volver
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de Resultados
+  if (gameOver) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+          <h2 className="text-3xl font-bold mb-4">¡Prueba Finalizada!</h2>
+          <div className="text-6xl font-black text-blue-600 mb-4">{score} / {userTotalQuestions}</div>
+          <p className="text-slate-600 mb-8">Puntaje final</p>
+          <div className="flex gap-4 justify-center">
+            <button 
+              onClick={exitGame} 
+              className="bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg"
+            >
+              Menú Principal
+            </button>
+            <button 
+              onClick={() => { 
+                setGameOver(false); 
+                setScore(0); 
+                setQuestionCount(0); 
+                nextExercise(); 
+              }}
+              className="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg"
+            >
+              Intentar de nuevo
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!exercise) return <div>Cargando...</div>;
+
+  // Pantalla del Ejercicio
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-6 px-4">
+      {/* Header Info */}
+      <div className="w-full max-w-3xl flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm">
+        <button onClick={exitGame} className="text-sm text-gray-500 hover:text-gray-800 font-bold">
+            ← Volver al Menú
+        </button>
+        <div className="text-slate-700 font-bold">Pregunta {questionCount} / {userTotalQuestions}</div>
+        <div className={`font-mono text-xl font-bold ${timeLeft < 4 ? 'text-red-500' : 'text-blue-600'}`}>
+          00:{timeLeft.toString().padStart(2, '0')}
+        </div>
+      </div>
+
+      {/* Area de Pregunta */}
+      <div className="w-full max-w-3xl bg-white p-6 rounded-xl shadow-md mb-6 flex justify-center min-h-[160px]">
+        {exercise.renderMain()}
+      </div>
+
+      {/* Area de Opciones */}
+      <div className="w-full max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[0, 1, 2, 3].map((idx) => {
+          let borderColor = "border-gray-200";
+          let bgColor = "bg-white";
+          
+          if (showExplanation) {
+            if (idx === exercise.correctIndex) {
+              borderColor = "border-green-500";
+              bgColor = "bg-green-50";
+            } else if (idx === selectedOption) {
+              borderColor = "border-red-500";
+              bgColor = "bg-red-50";
+            }
+          } else if (selectedOption === idx) {
+             borderColor = "border-blue-500";
+          }
+
           return (
             <button
               key={idx}
               onClick={() => handleSelect(idx)}
-              disabled={selected !== null}
-              className={`p-2 rounded border ${bg}`}
-              style={{ minHeight: 120 }}
-              aria-label={`Opción ${String.fromCharCode(65 + idx)}`}
+              disabled={showExplanation}
+              className={`aspect-square p-2 border-4 rounded-xl transition-all ${borderColor} ${bgColor} hover:shadow-lg relative`}
             >
-              <div className="flex items-center justify-center h-full">
-                <OptionComponent />
-              </div>
-              <div className="text-center mt-2 font-bold">{String.fromCharCode(65 + idx)}</div>
+              <div className="absolute top-1 left-2 font-bold text-gray-400">{String.fromCharCode(65 + idx)}</div>
+              {exercise.renderOption(idx)}
             </button>
           );
         })}
       </div>
-    );
-  };
 
-  // Basic layout styles inline-tailwind friendly classes (assuming tailwind is present)
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-6">
-      <h1 className="text-2xl font-bold mb-4">Razonamiento - Simulador Kudert (Abstracto)</h1>
-
-      {phase === "config" && (
-        <div className="w-full max-w-xl border rounded p-4 shadow">
-          <p className="mb-3">Configuración de práctica</p>
-          <label className="block mb-2">
-            Cantidad de ejercicios:
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={total}
-              onChange={(e) => {
-                const v = parseInt(e.target.value || "1", 10);
-                setTotal(Math.max(1, Math.min(30, v)));
-              }}
-              className="ml-3 p-1 border rounded w-20"
-            />
-          </label>
-
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={startRun}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Iniciar práctica
-            </button>
-            <button
-              onClick={() => navigate(-1)}
-              className="bg-gray-500 text-white px-4 py-2 rounded"
-            >
-              Volver
-            </button>
+      {/* Explicación y Siguiente */}
+      {showExplanation && (
+        <div className="w-full max-w-3xl animate-fade-in-up">
+          <div className={`p-4 rounded-lg border-l-4 mb-4 ${selectedOption === exercise.correctIndex ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'}`}>
+            <h3 className="font-bold text-lg mb-1">
+              {selectedOption === exercise.correctIndex ? "¡Correcto!" : "Incorrecto"}
+            </h3>
+            <p className="text-slate-700">{exercise.explanation}</p>
           </div>
-
-          <div className="mt-4 text-sm text-gray-600">
-            Nota: cada ejercicio tiene <b>6 segundos</b>. Si se agota el tiempo, se tomará como
-            incorrecto automáticamente.
-          </div>
-        </div>
-      )}
-
-      {phase === "running" && currentTemplate && (
-        <div className="w-full max-w-3xl mt-4">
-          <div className="flex justify-between items-center mb-2">
-            <div>Ejercicio {currentIndex + 1} / {total}</div>
-            <div>Aciertos: {score}</div>
-          </div>
-
-          {/* Timer bar */}
-          <div className="w-full bg-gray-200 h-3 rounded overflow-hidden mb-3">
-            <div
-              style={{
-                width: `${(timeLeft / 6) * 100}%`,
-                height: "100%",
-                transition: "width 0.1s linear",
-                background: timeLeft > 2 ? "#60a5fa" : "#fb7185",
-              }}
-            />
-          </div>
-          <div className="mb-2 text-sm">
-            Tiempo restante: <b>{timeLeft.toFixed(2)}s</b>
-            {selected === "TIMEOUT" && <span className="ml-3 text-red-600 font-bold">Tiempo agotado — marcado como incorrecto</span>}
-          </div>
-
-          {/* Main rendered example */}
-          <div className="flex justify-center mb-3">
-            {currentTemplate.renderMain()}
-          </div>
-
-          {/* Options (A-D) */}
-          {renderOptionsGrid()}
-
-          {/* Explanation */}
-          {showExplanation && (
-            <div className="mt-4 p-3 bg-yellow-50 border rounded">
-              <div className="font-bold mb-1">Explicación</div>
-              <div>{currentTemplate.explanation}</div>
-            </div>
-          )}
-
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleNext}
-              disabled={selected === null && !autoTaken}
-              className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-60"
-            >
-              {currentIndex + 1 >= templates.length ? "Finalizar" : "Siguiente"}
-            </button>
-            <button
-              onClick={() => {
-                clearInterval(timerRef.current);
-                setPhase("config");
-              }}
-              className="bg-gray-400 text-white px-4 py-2 rounded"
-            >
-              Cancelar sesión
-            </button>
-          </div>
-        </div>
-      )}
-
-      {phase === "finished" && (
-        <div className="w-full max-w-xl mt-6 border rounded p-4 shadow">
-          <h2 className="text-xl font-bold">Práctica finalizada</h2>
-          <p className="mt-2">
-            Resultado: <b>{score}</b> / {total} aciertos.
-          </p>
-          <div className="flex gap-2 mt-4">
-            <button onClick={restart} className="bg-blue-600 text-white px-4 py-2 rounded">
-              Reiniciar
-            </button>
-            <button onClick={() => navigate(-1)} className="bg-gray-500 text-white px-4 py-2 rounded">
-              Volver
-            </button>
-          </div>
+          <button 
+            onClick={nextExercise}
+            className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95"
+          >
+            SIGUIENTE EJERCICIO →
+          </button>
         </div>
       )}
     </div>

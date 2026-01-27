@@ -16,164 +16,250 @@ const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 // --- Generadores de problemas ---
 const problemGenerators = {
-  // ✅ Serie de repetición tipo examen Kudert
+  // Serie de repetición tipo examen Kudert (mejorada: cadena única, offsets variables)
   repeticion: () => {
-    const ascending = Math.random() > 0.5; // Ascendente o descendente
-    const start = ascending ? getRandomInt(2, 4) : getRandomInt(5, 9);
-    const end = ascending ? start + getRandomInt(2, 3) : start - getRandomInt(2, 3);
-    const series = [];
+    const ascending = Math.random() > 0.5;
+    const start = ascending ? getRandomInt(1, 9) : getRandomInt(1, 9);
+    const offset = getRandomInt(0, 2); // Offset para repeticiones no estrictas
+    const length = getRandomInt(3, 5); // Longitud variable de grupos
+    const seriesParts = [];
+    let currentReps = 1 + offset;
 
     if (ascending) {
-      for (let i = start; i <= end; i++) {
-        series.push(String(i).repeat(i - start + 1));
+      let currentNum = start;
+      for (let i = 0; i < length; i++) {
+        seriesParts.push(String(currentNum).repeat(currentReps));
+        currentNum++;
+        currentReps++;
       }
-      const answer = String(end + 1).repeat(end - start + 2);
+      const answer = String(currentNum).repeat(currentReps);
       return {
-        series,
+        series: [seriesParts.join("")], // Como cadena única
         answer,
-        explanation:
-          "Serie de repetición ascendente: cada número se repite una vez más que el anterior.",
+        explanation: `Serie de repetición ascendente como cadena continua: cada dígito se repite incrementando desde ${1 + offset} veces.`,
         difficulty: "easy",
       };
     } else {
-      for (let i = start; i >= end; i--) {
-        series.push(String(i).repeat(start - i + 1));
+      let currentNum = start;
+      for (let i = 0; i < length; i++) {
+        seriesParts.push(String(currentNum).repeat(currentReps));
+        currentNum--;
+        currentReps++;
       }
-      const answer = String(end - 1).repeat(start - end + 2);
+      const answer = String(currentNum).repeat(currentReps);
       return {
-        series,
+        series: [seriesParts.join("")],
         answer,
-        explanation:
-          "Serie de repetición descendente: cada número se repite una vez más que el anterior en orden descendente.",
+        explanation: `Serie de repetición descendente como cadena continua: cada dígito se repite incrementando desde ${1 + offset} veces.`,
         difficulty: "easy",
       };
     }
   },
 
-  // ✅ Serie aritmética tipo examen Kudert
+  // Serie aritmética tipo examen Kudert (mejorada: más variabilidad, longitudes variables)
   aritmetica: () => {
-    const type = randomFrom(["constante", "decreciente", "variable"]);
+    const type = randomFrom(["constante", "decreciente", "variable_asc", "variable_desc", "mixed"]);
     let series = [];
     let answer = 0;
     let explanation = "";
+    const length = getRandomInt(3, 8); // Longitud variable
 
     if (type === "constante") {
       const start = getRandomInt(5, 20);
       const step = getRandomInt(3, 10);
-      series = Array.from({ length: 6 }, (_, i) => start + i * step);
-      answer = start + 6 * step;
-      explanation = `Serie aritmética con razón constante +${step}.`;
+      series = Array.from({ length }, (_, i) => start + i * step);
+      answer = start + length * step;
+      explanation = `Serie aritmética constante: suma +${step} cada vez.`;
     } else if (type === "decreciente") {
       const start = getRandomInt(100, 150);
       const step = -getRandomInt(10, 20);
-      series = Array.from({ length: 4 }, (_, i) => start + i * step);
-      answer = start + 4 * step;
-      explanation = `Serie aritmética decreciente con razón ${step}.`;
-    } else {
+      series = Array.from({ length }, (_, i) => start + i * step);
+      answer = start + length * step;
+      explanation = `Serie aritmética decreciente: resta ${-step} cada vez.`;
+    } else if (type === "variable_asc") {
       const start = getRandomInt(40, 70);
       series = [start];
       let diff = 1;
-      for (let i = 1; i < 6; i++) {
+      for (let i = 1; i < length; i++) {
+        series.push(series[i - 1] + diff);
+        diff++;
+      }
+      answer = series[series.length - 1] + diff;
+      explanation = "Serie aritmética variable ascendente: suma creciente (+1, +2, +3...).";
+    } else if (type === "variable_desc") {
+      const start = getRandomInt(40, 70);
+      series = [start];
+      let diff = 1;
+      for (let i = 1; i < length; i++) {
         series.push(series[i - 1] - diff);
         diff++;
       }
       answer = series[series.length - 1] - diff;
-      explanation =
-        "Serie aritmética variable: el número restado aumenta progresivamente (-1, -2, -3...).";
+      explanation = "Serie aritmética variable descendente: resta creciente (-1, -2, -3...).";
+    } else { // mixed
+      const start = getRandomInt(20, 50);
+      const constStep = getRandomInt(5, 10);
+      series = Array.from({ length: Math.floor(length / 2) }, (_, i) => start + i * constStep);
+      let diff = 1;
+      for (let i = Math.floor(length / 2); i < length; i++) {
+        series.push(series[i - 1] - diff);
+        diff++;
+      }
+      answer = series[series.length - 1] - diff;
+      explanation = "Serie aritmética mixta: constante al inicio, luego variable descendente.";
     }
 
     return { series, answer, explanation, difficulty: "easy" };
   },
 
-  // 🔸 Serie geométrica
+  // Serie geométrica (mejorada: ascendente/descendente explícito, ratios variables)
   geometrica: () => {
-    const start = getRandomInt(2, 4);
-    const ratio = getRandomInt(2, 3);
-    const series = Array.from({ length: 6 }, (_, i) => start * ratio ** i);
-    const answer = start * ratio ** 6;
+    const ascending = Math.random() > 0.5;
+    const start = getRandomInt(2, 8);
+    const ratio = getRandomInt(2, 5);
+    const length = getRandomInt(3, 5);
+    const series = Array.from({ length }, (_, i) => start * (ascending ? ratio ** i : ratio ** (length - 1 - i)));
+    const answer = ascending ? series[series.length - 1] * ratio : series[series.length - 1] / ratio;
     return {
       series,
       answer,
-      explanation: `Serie geométrica: cada término se multiplica por ${ratio}.`,
+      explanation: `Serie geométrica ${ascending ? "ascendente" : "descendente"}: ${ascending ? "multiplica" : "divide"} por ${ratio}.`,
       difficulty: "medium",
     };
   },
 
-  // 🔸 Serie alternante
+  // Serie alternante (mejorada: basada en grupos con permutaciones)
   alternante: () => {
-    const base1 = getRandomInt(1, 10);
-    const base2 = base1 + getRandomInt(2, 5);
-    const step1 = getRandomInt(1, 3);
-    const step2 = getRandomInt(1, 3);
+    const ascending = Math.random() > 0.5;
+    const groupSize = 3; // Como en PDF
+    const numGroups = getRandomInt(2, 3);
+    const start = ascending ? getRandomInt(1, 5) : getRandomInt(20, 30);
     const series = [];
+    let current = start;
 
-    for (let i = 0; i < 6; i++) {
-      if (i % 2 === 0) series.push(base1 + Math.floor(i / 2) * step1);
-      else series.push(base2 + Math.floor(i / 2) * step2);
+    for (let g = 0; g < numGroups; g++) {
+      const group = [];
+      for (let i = 0; i < groupSize; i++) {
+        group.push(ascending ? current + i : current - i);
+      }
+      // Permutación: primero-último-medio (como 2-4-3 para 2-3-4)
+      series.push(group[0], group[2], group[1]);
+      current = ascending ? current + groupSize : current - groupSize;
     }
 
-    const answer =
-      series.length % 2 === 0
-        ? base1 + (series.length / 2) * step1
-        : base2 + Math.floor(series.length / 2) * step2;
+    // Siguiente grupo permutado, pero solo el primero o completo según PDF
+    const nextGroup = [];
+    for (let i = 0; i < groupSize; i++) {
+      nextGroup.push(ascending ? current + i : current - i);
+    }
+    const answer = nextGroup[0]; // Como en PDF, a veces solo el primero
 
     return {
-      series,
+      series: series.flat(),
       answer,
-      explanation: `Serie alternante: alterna entre +${step1} y +${step2}.`,
+      explanation: `Serie alternante en grupos de 3 con permutación (primero-último-medio). Separa en grupos para ver el patrón ${ascending ? "ascendente" : "descendente"}.`,
       difficulty: "medium",
     };
   },
 
-  // 🔹 Serie especial (Fibonacci)
+  // Serie especial (mejorada: Fibonacci + e/pi con sumas)
   especial: () => {
-    const a = getRandomInt(1, 5);
-    const b = getRandomInt(2, 8);
-    const mod = Math.random() > 0.5 ? getRandomInt(1, 2) : 0;
-    const series = [a, b];
-    for (let i = 2; i < 6; i++) series.push(series[i - 1] + series[i - 2] + mod);
-    const answer = series[series.length - 1] + series[series.length - 2] + mod;
-    return {
-      series,
-      answer,
-      explanation:
-        mod > 0
-          ? `Serie tipo Fibonacci con incremento fijo +${mod}.`
-          : "Serie de Fibonacci pura.",
-      difficulty: "hard",
-    };
+    const type = Math.random() > 0.5 ? "fibonacci" : "constant"; // 50% cada uno
+    if (type === "fibonacci") {
+      const a = getRandomInt(1, 5);
+      const b = getRandomInt(2, 8);
+      const mod = Math.random() > 0.5 ? getRandomInt(1, 2) : 0;
+      const series = [a, b];
+      for (let i = 2; i < 8; i++) series.push(series[i - 1] + series[i - 2] + mod);
+      const answer = series[series.length - 1] + series[series.length - 2] + mod;
+      return {
+        series,
+        answer,
+        explanation: mod > 0 ? `Serie tipo Fibonacci con +${mod}. Suma los dos anteriores.` : "Serie de Fibonacci pura: suma de los dos anteriores.",
+        difficulty: "hard",
+      };
+    } else {
+      const isEuler = Math.random() > 0.5;
+      const digits = isEuler ? "718281828459045" : "141592653589793"; // Dígitos después del punto
+      const groupSize = getRandomInt(1, 2) + 1; // Pares o singles
+      const targetSum = isEuler ? 9 : 10; // Como en PDF
+      const numGroups = getRandomInt(4, 6);
+      const series = [];
+      let index = 0;
+      for (let g = 0; g < numGroups; g++) {
+        const group = digits.slice(index, index + groupSize).split("").map(Number);
+        series.push(...group);
+        index += groupSize;
+      }
+      const nextGroup = digits.slice(index, index + groupSize).split("").map(Number);
+      const answer = nextGroup[nextGroup.length - 1]; // Último dígito para completar suma
+      return {
+        series,
+        answer,
+        explanation: `Serie basada en dígitos de ${isEuler ? "e" : "π"} agrupados en ${groupSize}s que suman ~${targetSum}. Separa y suma para ver.`,
+        difficulty: "hard",
+      };
+    }
   },
 
-  // 🔹 Serie mixta (letra-número)
+  // Serie mixta (mejorada: subtipos para repeticiones, skips, posiciones)
   mixta: () => {
+    const type = randomFrom(["repeticion", "skips", "posiciones"]);
     const letras = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
-    const start = getRandomInt(1, 10);
-    const step = getRandomInt(1, 3);
-    const startLetter = getRandomInt(0, letras.length - 10);
-    const series = [];
 
-    for (let i = 0; i < 5; i++) {
-      series.push(`${letras[startLetter + i * step]}${start + i}`);
+    if (type === "repeticion") {
+      const startNum = getRandomInt(2, 6) * 2; // Pares
+      const startLetterIdx = getRandomInt(0, letras.length - 10);
+      const series = [];
+      let reps = 1;
+      for (let i = 0; i < 4; i++) {
+        series.push(startNum + i * 2);
+        series.push(...Array(reps).fill(letras[startLetterIdx + i * 3].toLowerCase()));
+        reps++;
+      }
+      const answer = letras[startLetterIdx + 4 * 3].toLowerCase();
+      return {
+        series,
+        answer,
+        explanation: "Serie mixta con números pares ascendentes y letras repetidas incrementando (b, ee, hhh...).",
+        difficulty: "hard",
+      };
+    } else if (type === "skips") {
+      const series = ["d", "d", "f", 1, 2, "h", "h", "j", 1, 2];
+      const answer = "l";
+      return {
+        series,
+        answer,
+        explanation: "Serie mixta con skips alfabéticos (skip e, g, i...): d d f (skip e), h h j (skip i), intercalado con 1 2.",
+        difficulty: "hard",
+      };
+    } else { // posiciones
+      const startLetterIdx = 2; // C=3 (posición 3)
+      const step = 3;
+      const startNum = 4;
+      const series = [];
+      for (let i = 0; i < 4; i++) {
+        series.push(letras[startLetterIdx + i * step].toUpperCase());
+        series.push(startNum + i);
+      }
+      const answer = letras[startLetterIdx + 4 * step].toUpperCase();
+      return {
+        series: series.slice(0, -1), // Quita el último número para preguntar por letra
+        answer,
+        explanation: `Serie mixta alternante letra-número; letras por posiciones múltiplos de ${step} (C=3, F=6, I=9...). Siguiente letra posición ${3 + 4 * step}.`,
+        difficulty: "hard",
+      };
     }
-
-    const answer = `${letras[startLetter + 5 * step]}${start + 5}`;
-    return {
-      series,
-      answer,
-      explanation:
-        "Serie mixta letra-número: las letras avanzan con salto fijo y los números suben de uno en uno.",
-      difficulty: "hard",
-    };
   },
 };
 
-// --- Generador de opciones ---
+// --- Generador de opciones (sin cambios mayores) ---
 const generateOptions = (correct) => {
-  if (isNaN(correct)) {
+  if (typeof correct === "string" && isNaN(correct)) {
     const letras = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
-    const options = new Set([correct]);
+    const options = new Set([correct.toUpperCase()]);
     while (options.size < 4) {
-      const idx = letras.indexOf(correct[0].toUpperCase());
+      const idx = letras.indexOf(correct.toUpperCase());
       const rand = letras[getRandomInt(Math.max(0, idx - 3), Math.min(idx + 3, letras.length - 1))];
       options.add(rand);
     }
@@ -208,17 +294,17 @@ export default function SeriesNumeros() {
   const timerRef = useRef(null);
   const answeredRef = useRef(false);
 
-  // --- Selección según modo ---
+  // --- Selección según modo (ajustada para más énfasis en hard) ---
   const getAvailableTypes = () => {
     if (gameMode === "realistic") {
-      // Distribución 30/40/30 (fácil/intermedio/difícil)
+      // Distribución ajustada: 40% easy, 30% medium, 30% hard
       const roll = Math.random() * 100;
-      if (roll < 30) return randomFrom(["repeticion", "aritmetica"]);
+      if (roll < 40) return randomFrom(["repeticion", "aritmetica"]);
       else if (roll < 70) return randomFrom(["geometrica", "alternante"]);
       else return randomFrom(["especial", "mixta"]);
     } else {
       if (difficulty === "easy") {
-        return Math.random() < 0.4 ? "repeticion" : "aritmetica";
+        return randomFrom(["repeticion", "aritmetica"]);
       } else if (difficulty === "medium") {
         return randomFrom(["geometrica", "alternante"]);
       } else {
@@ -263,7 +349,7 @@ export default function SeriesNumeros() {
     answeredRef.current = true;
     clearInterval(timerRef.current);
 
-    const correct = selected === problem.answer;
+    const correct = selected == problem.answer; // == para manejar num/string
     if (correct) {
       setScore((s) => s + 1);
       setFeedback("✅ ¡Correcto!");
