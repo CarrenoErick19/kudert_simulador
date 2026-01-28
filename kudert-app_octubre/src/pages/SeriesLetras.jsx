@@ -93,23 +93,16 @@ export default function SeriesLetras() {
     },
 
     doublePairs: (alphabet) => {
-      // Lógica modificada: Diferencia interna entre 3 y 4 para dificultad media/dificil
       let jumpBetweenStarts, gapInPair;
 
       if (difficulty === "medium" || difficulty === "hard") {
-        // Genera gapInPair de 3 o 4 (Mayor a 2, menor a 5)
         gapInPair = Math.floor(Math.random() * 2) + 3; 
-        
-        // El salto entre pares debe ser mayor que el gap interno para evitar superposición visual
-        // Generamos un salto entre 5 y 8
         jumpBetweenStarts = Math.floor(Math.random() * 4) + 5; 
       } else {
-        // Lógica para fácil (consecutivos)
         jumpBetweenStarts = Math.floor(Math.random() * 2) + 2;
         gapInPair = 1;
       }
 
-      // Punto de inicio seguro para que quepa toda la serie
       const maxNeeded = (jumpBetweenStarts * 5) + gapInPair + 2;
       let start = Math.floor(Math.random() * (alphabet.length - maxNeeded)) + 1;
 
@@ -120,11 +113,9 @@ export default function SeriesLetras() {
         const first = getLetter(currentPos, alphabet);
         const second = getLetter(currentPos + gapInPair, alphabet);
         series.push(first + second);
-        // Avanzamos la posición inicial del siguiente par según el salto calculado
         currentPos += jumpBetweenStarts; 
       }
 
-      // Respuesta: siguiente par
       const nextFirst = getLetter(currentPos, alphabet);
       const nextSecond = getLetter(currentPos + gapInPair, alphabet);
       const answer = nextFirst + nextSecond;
@@ -149,56 +140,54 @@ export default function SeriesLetras() {
     },
   };
 
+  // Se filtra la lista para coincidir exactamente con el archivo de texto proporcionado
   const realisticProblems = [
-    { series: "ACEGIKM", answer: "O", options: ["O", "S", "A", "P"], explanation: "En la sucesión se salta una letra cada vez: A (B) C (D) E (F) G (H) I (J) K (L) M. La siguiente letra sería O. En el alfabeto español le seguiría la Ñ, pero como no está en las opciones y sí aparece la O, se entiende que se usa el alfabeto inglés." },
-    { series: "DFHJLN", answer: "P", options: ["P", "Ñ", "O", "Q"], explanation: "Patrón: D (E) F (G) H (I) J (K) L (M) N. Salta una letra entre cada una. La siguiente es P. Como hay Ñ en las opciones, usamos alfabeto español." },
-    { series: "KMOQS", answer: "U", options: ["U", "V", "T", "Ñ"], explanation: "K (L) M (N) O (P) Q (R) S. Salta una letra. La siguiente es U. Como aparece la Ñ en opciones, verifiquemos: en español sería Ñ después de O, pero aquí la serie claramente sigue el orden inglés tras S→U." },
-    { series: "D K Q ?", answer: "X", options: ["X", "Y", "W", "Z"], explanation: "Pasamos a números: D=4, K=11, Q=18. K - D = 7, Q - K = 7. El patrón es sumar 7. Entonces: 18 + 7 = 25, que corresponde a X en el alfabeto español (sin incluir la Ñ como posición fija aquí)." },
-    { series: "G N T ?", answer: "Y", options: ["Z", "A", "Y", "B"], explanation: "G=7, N=14, T=20 → diferencias: +7, +6. Siguiente diferencia +5: 20+5=25=Y (alfabeto inglés)." },
-    { series: "F M T ?", answer: "A", options: ["C", "D", "A", "B"], explanation: "F=6, M=13, T=20 → +7, +7. Siguiente +7: 20+7=27, excede 26 → 27-26=1=A." },
-    { series: "SROÑKJEDX", answer: "W", options: ["W", "V", "C", "A"], explanation: "Al aparecer la Ñ, usamos el alfabeto español. Separamos en pares: SR (S=19, R=18), OÑ (O=16, Ñ=15), KJ (K=11, J=10), ED (E=5, D=4), X? Cada par son letras consecutivas en orden descendente. La última letra dada es X=25, le seguiría W=24." },
-    { series: "HGFEDCBA", answer: "Z", options: ["Z", "Y", "A", "B"], explanation: "Descendente consecutivo desde H hasta A. Después de A (1) no puede bajar, en este contexto la serie terminaría, pero si continuara circularmente, A→Z (26). Opción más lógica en ejercicios comunes: Z." },
-    { series: "UOIAUOIEUOI ?", answer: "I", options: ["A", "E", "I", "O"], explanation: "La secuencia se repite: UOI, luego A, luego UOI, luego E, luego UOI. Entre cada bloque UOI hay una vocal en orden: A, E, I, O, U. Entonces después del último UOI sigue I." },
-    { series: "XYZAXYZEXYZ ?", answer: "I", options: ["I", "A", "E", "O"], explanation: "Bloque constante XYZ, luego vocal intercalada: A, E, siguiente vocal en orden: I." },
-    { series: "EFGPQRHIJ ?", answer: "STU", options: ["K", "STU", "L", "T"], explanation: "Separamos las letras en grupos de tres según el orden alfabético: EFG – PQR – HIJ – ? Vemos que hay dos series intercaladas: una avanza normalmente (EFG, HIJ, KLM…) y otra está en medio (PQR, STU…). La serie que toca continuar es PQR, por lo que sigue STU." },
-    { series: "Q N J F ?", answer: "B", options: ["C", "B", "D", "A"], explanation: "Letras en números (inglés): Q=17, N=14, J=10, F=6. Diferencias: 17-14=3, 14-10=4, 10-6=4. El patrón parece ser -3, -4, -4. Si repetimos -4: 6-4=2, que es B." },
-    { series: "Z W R M ?", answer: "H", options: ["H", "G", "I", "J"], explanation: "Z=26, W=23 (-3), R=18 (-5), M=13 (-5). Diferencias -3, -5, -5. Siguiente -5: 13-5=8=H." },
-    { series: "AO ER IU ?", answer: "MX", options: ["MV", "AD", "NJ", "MX"], explanation: "Analizamos primeras letras: A=1, E=5, I=9 → diferencia +4, siguiente 9+4=13=M. Segundas letras: O=15, R=18, U=21 → diferencia +3, siguiente 21+3=24=X. El par siguiente es MX." },
-    { series: "BR EU HX ?", answer: "KA", options: ["KA", "JA", "KZ", "JZ"], explanation: "Primeras: B=2, E=5, H=8 → +3, siguiente 8+3=11=K. Segundas: R=18, U=21, X=24 → +3, siguiente 24+3=27 → 27-26=1=A. Par: KA." },
-    { series: "BEGJLOQ ?", answer: "T", options: ["T", "S", "U", "R"], explanation: "Posiciones (español con Ñ=15 o inglés con O=15). Analicemos en inglés para que coincida con las letras dadas: B=2, E=5, G=7, J=10, L=12, O=15, Q=17. Diferencias: +3, +2, +3, +2, +3, +2. El patrón alterna +3 y +2. La última diferencia fue +2 (O→Q), ahora toca +3: 17+3=20=T." },
-    { series: "CFILORU ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "C=3, F=6 (+3), I=9 (+3), L=12 (+3), O=15 (+3), R=18 (+3), U=21 (+3). Constante +3. Siguiente 21+3=24=X." },
-    { series: "D G I L N Q ?", answer: "S", options: ["S", "T", "R", "U"], explanation: "D=4, G=7 (+3), I=9 (+2), L=12 (+3), N=14 (+2), Q=17 (+3). Patrón +3,+2. Siguiente +2: 17+2=19=S." },
-    { series: "E H J M O ?", answer: "R", options: ["L", "S", "F", "R"], explanation: "Valores: E=5, H=8, J=10, M=13, O=15. Diferencias: +3, +2, +3, +2. Sigue +3: 15+3=18=R." },
-    { series: "K N P S U ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "K=11, N=14 (+3), P=16 (+2), S=19 (+3), U=21 (+2). Siguiente +3: 21+3=24=X." },
-    { series: "B E G J L ?", answer: "O", options: ["N", "O", "P", "M"], explanation: "B=2, E=5 (+3), G=7 (+2), J=10 (+3), L=12 (+2). Siguiente +3: 12+3=15=O." },
-    { series: "I J L J J M K J N ?", answer: "L", options: ["I", "L", "J", "M"], explanation: "Separamos la J que se repite cada dos posiciones y analizamos el resto: I(9) – L(12) – J(10) – M(13) – K(11) – N(14) – ? Las letras sin J muestran: 9, 12, 10, 13, 11, 14… patrón: +3, -2, +3, -2, +3. Aplicamos -2 a 14: 14-2=12=L." },
-    { series: "A X C X E X G X ?", answer: "I", options: ["I", "H", "J", "X"], explanation: "Eliminamos X constante: A, C, E, G… letras alternas (saltando una). Siguiente I." },
-    { series: "P Q R Q S T U T ?", answer: "V", options: ["V", "W", "X", "Q"], explanation: "Eliminando Q y T que son intercalados fijos: P, R, S, U… Patrón: P(16), R(18) +2, S(19) +1, U(21) +2, siguiente probable +1: 21+1=22=V." },
-    { series: "W Z C F I ?", answer: "L", options: ["K", "L", "M", "J"], explanation: "Considerando el alfabeto inglés (27 letras con Ñ no presente), o español sin Ñ en esta serie. Posiciones: W=23, Z=26, C=3 (28-25=3 si excede 26), F=6, I=9. El patrón es +3 cada vez. 9+3=12=L." },
-    { series: "U X A D G ?", answer: "J", options: ["J", "I", "H", "K"], explanation: "U=21, X=24 (+3), A=1 (+3 circular), D=4 (+3), G=7 (+3). Siguiente 7+3=10=J." },
-    { series: "T W Z C ?", answer: "F", options: ["F", "E", "D", "G"], explanation: "T=20, W=23 (+3), Z=26 (+3), C=29-26=3 (+3 circular). Siguiente 3+3=6=F." },
-    { series: "A D E E F G I H ?", answer: "I", options: ["I", "J", "E", "K"], explanation: "Ordenamos visualmente: A – (D E) – E – (F G) – I – (H ?) Parece que hay una vocal, luego dos letras consecutivas, luego vocal, etc. La última pareja empezó con H, le sigue I para completar H I." },
-    { series: "A C F H K ?", answer: "M", options: ["N", "J", "M", "K"], explanation: "Posiciones: A=1, C=3, F=6, H=8, K=11. Diferencias: +2, +3, +2, +3. Sigue +2: 11+2=13=M." },
-    { series: "D F I K N ?", answer: "P", options: ["P", "Q", "O", "R"], explanation: "D=4, F=6 (+2), I=9 (+3), K=11 (+2), N=14 (+3). Siguiente +2: 14+2=16=P." },
-    { series: "G I L N Q ?", answer: "S", options: ["S", "T", "R", "U"], explanation: "G=7, I=9 (+2), L=12 (+3), N=14 (+2), Q=17 (+3). Siguiente +2: 17+2=19=S." },
-    { series: "B D H J N P ?", answer: "T", options: ["N", "J", "M", "T"], explanation: "Posiciones: B=2, D=4, H=8, J=10, N=14, P=16. Diferencias: +2, +4, +2, +4, +2. Sigue +4: 16+4=20=T." },
-    { series: "C E I K O Q ?", answer: "U", options: ["U", "T", "S", "V"], explanation: "C=3, E=5 (+2), I=9 (+4), K=11 (+2), O=15 (+4), Q=17 (+2). Siguiente +4: 17+4=21=U." },
-    { series: "F H L N R T ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "F=6, H=8 (+2), L=12 (+4), N=14 (+2), R=18 (+4), T=20 (+2). Siguiente +4: 20+4=24=X." },
-    { series: "M N P S W ?", answer: "B", options: ["Z", "H", "B", "O"], explanation: "Posiciones: M=13, N=14 (+1), P=16 (+2), S=19 (+3), W=23 (+4). El incremento aumenta en 1 cada vez. Siguiente incremento +5: 23+5=28. Como el alfabeto tiene 26 letras, 28-26=2 → B." },
-    { series: "A B D G K ?", answer: "P", options: ["P", "O", "N", "Q"], explanation: "A=1, B=2 (+1), D=4 (+2), G=7 (+3), K=11 (+4). Incremento creciente +1 cada paso. Siguiente +5: 11+5=16=P." },
-    { series: "C D F I M ?", answer: "R", options: ["R", "S", "T", "Q"], explanation: "C=3, D=4 (+1), F=6 (+2), I=9 (+3), M=13 (+4). Siguiente +5: 13+5=18=R." },
-    { series: "X T P L ?", answer: "H", options: ["F", "I", "G", "H"], explanation: "Posiciones: X=24, T=20, P=16, L=12. Diferencia constante: -4. Siguiente: 12-4=8=H." },
-    { series: "W S O K ?", answer: "G", options: ["G", "H", "F", "E"], explanation: "W=23, S=19 (-4), O=15 (-4), K=11 (-4). Siguiente 11-4=7=G." },
-    { series: "Z V R N ?", answer: "J", options: ["J", "I", "H", "K"], explanation: "Z=26, V=22 (-4), R=18 (-4), N=14 (-4). Siguiente 14-4=10=J." },
-    { series: "G H A J K E M N I ?", answer: "O", options: ["Q", "P", "N", "O"], explanation: "Separamos pares regulares: GH, JK, MN, OP… y vocales intercaladas: A, E, I. La secuencia es: par GH, vocal A, par JK, vocal E, par MN, vocal I, luego sigue el par OP. La siguiente letra es O." },
-    { series: "B C U D E O F G ?", answer: "I", options: ["I", "H", "J", "K"], explanation: "Pares: BC, DE, FG… vocales intercaladas: U, O, ?. Vocales en orden inverso U, O, I, E, A. Siguiente I." },
-    { series: "L M E N O A P Q ?", answer: "U", options: ["I", "U", "O", "E"], explanation: "Pares: LM, NO, PQ… vocales intercaladas: E, A, ?. Vocales en orden E, A, U (quizás no secuencia estándar). Posiblemente orden alfabético inverso parcial: E(5), A(1), siguiente circular sería U(21)." },
-    { series: "O M A U M A A M A ?", answer: "E", options: ["D", "E", "A", "C"], explanation: "Eliminamos las constantes \"MA\" repetidas: queda O, U, A, ?. Las vocales en orden circular: A E I O U A E I O U A… Después de A (en la posición relativa de la serie) sigue E." },
-    { series: "E X I X O X U X ?", answer: "A", options: ["A", "E", "I", "O"], explanation: "Eliminar X: E, I, O, U. Vocales en orden saltando una: E, I, O, U, A. Siguiente A." },
-    { series: "A Y E Y I Y O Y ?", answer: "U", options: ["U", "A", "E", "I"], explanation: "Eliminar Y: A, E, I, O. Siguiente U." },
+    { alphabet: "EN", series: "ACEGIKM", answer: "O", options: ["O", "S", "A", "P"], explanation: "Salto +2 (inglés). A(1), C(3), E(5)... M(13), siguiente O(15)." },
+    { alphabet: "ES", series: "DFHJLN", answer: "P", options: ["P", "Ñ", "O", "Q"], explanation: "Salto de una letra. Al estar la Ñ en opciones, usamos alfabeto español." },
+    { alphabet: "EN", series: "KMOQS", answer: "U", options: ["U", "V", "T", "Ñ"], explanation: "+2 letras. K(11), M(13), O(15), Q(17), S(19) -> U(21). Lógica inglés." },
+    { alphabet: "ES", series: "D K Q ?", answer: "X", options: ["X", "Y", "W", "Z"], explanation: "D(4) +7 = K(11). K(11) +7 = Q(18, español). Q(18)+7 = 25 (X en español)." },
+    { alphabet: "EN", series: "G N T ?", answer: "Y", options: ["Z", "A", "Y", "B"], explanation: "G=7, N=14 (+7), T=20 (+6). Sigue +5: 20+5=25=Y (Alfabeto Inglés)." },
+    { alphabet: "EN", series: "F M T ?", answer: "A", options: ["C", "D", "A", "B"], explanation: "F=6, M=13 (+7), T=20 (+7). Siguiente +7: 20+7=27 -> A (Inglés)." },
+    { alphabet: "ES", series: "SROÑKJEDX", answer: "W", options: ["W", "V", "C", "A"], explanation: "Pares descendentes consecutivos (español por la Ñ): SR, OÑ, KJ, ED. X sigue W." },
+    { alphabet: "EN", series: "HGFEDCBA", answer: "Z", options: ["Z", "Y", "A", "B"], explanation: "Descendente simple. Tras A sigue Z (circular)." },
+    { alphabet: "ES", series: "UOIAUOIEUOI ?", answer: "I", options: ["A", "E", "I", "O"], explanation: "Patrón de vocales intercaladas." },
+    { alphabet: "EN", series: "XYZAXYZEXYZ ?", answer: "I", options: ["I", "A", "E", "O"], explanation: "Bloque XYZ constante, vocales suben." },
+    { alphabet: "EN", series: "EFGPQRHIJ ?", answer: "STU", options: ["K", "STU", "L", "T"], explanation: "Tríos alfabéticos intercalados." },
+    { alphabet: "EN", series: "Q N J F ?", answer: "B", options: ["C", "B", "D", "A"], explanation: "Q(17), N(14), J(10), F(6). Restas: -3, -4, -4. Siguiente -4: 6-4=2(B)." },
+    { alphabet: "EN", series: "Z W R M ?", answer: "H", options: ["H", "G", "I", "J"], explanation: "Z(26), W(23), R(18), M(13). -3, -5, -5. Siguiente -5: 8(H)." },
+    { alphabet: "EN", series: "AO ER IU ?", answer: "MX", options: ["MV", "AD", "NJ", "MX"], explanation: "Primeras +4 (A->E->I->M). Segundas +3 (O->R->U->X)." },
+    { alphabet: "EN", series: "BR EU HX ?", answer: "KA", options: ["KA", "JA", "KZ", "JZ"], explanation: "Primeras +3 (B->E->H->K). Segundas +3 (R->U->X->A)." },
+    { alphabet: "EN", series: "BEGJLOQ ?", answer: "T", options: ["T", "S", "U", "R"], explanation: "B(2) +3 E(5) +2 G(7) +3 J(10)... Q(17)+3 = T(20)." },
+    { alphabet: "EN", series: "CFILORU ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "+3 constante. U(21)+3=24(X) (Inglés)." },
+    { alphabet: "EN", series: "D G I L N Q ?", answer: "S", options: ["S", "T", "R", "U"], explanation: "+3, +2. Q(17)+2=19(S)." },
+    { alphabet: "EN", series: "E H J M O ?", answer: "R", options: ["L", "S", "F", "R"], explanation: "+3, +2. O(15)+3=18(R)." },
+    { alphabet: "EN", series: "K N P S U ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "+3, +2. U(21)+3=24(X)." },
+    { alphabet: "EN", series: "B E G J L ?", answer: "O", options: ["N", "O", "P", "M"], explanation: "+3, +2. L(12)+3=15(O)." },
+    { alphabet: "EN", series: "A X C X E X G X ?", answer: "I", options: ["I", "H", "J", "X"], explanation: "Saltando X: A, C, E, G... (+2). Siguiente I." },
+    { alphabet: "EN", series: "P Q R Q S T U T ?", answer: "V", options: ["V", "W", "X", "Q"], explanation: "Serie compleja. U + 1 = V." },
+    { alphabet: "EN", series: "W Z C F I ?", answer: "L", options: ["K", "L", "M", "J"], explanation: "+3 constante. I(9)+3=12(L)." },
+    { alphabet: "EN", series: "U X A D G ?", answer: "J", options: ["J", "I", "H", "K"], explanation: "+3 constante (circular). G(7)+3=10(J)." },
+    { alphabet: "EN", series: "T W Z C ?", answer: "F", options: ["F", "E", "D", "G"], explanation: "+3 constante. C(3)+3=6(F)." },
+    { alphabet: "EN", series: "A D E E F G I H ?", answer: "I", options: ["I", "J", "E", "K"], explanation: "Parejas consecutivas tras vocal." },
+    { alphabet: "EN", series: "A C F H K ?", answer: "M", options: ["N", "J", "M", "K"], explanation: "+2, +3. K(11)+2=13(M)." },
+    { alphabet: "EN", series: "D F I K N ?", answer: "P", options: ["P", "Q", "O", "R"], explanation: "+2, +3. N(14)+2=16(P)." },
+    { alphabet: "EN", series: "G I L N Q ?", answer: "S", options: ["S", "T", "R", "U"], explanation: "+2, +3. Q(17)+2=19(S)." },
+    { alphabet: "EN", series: "B D H J N P ?", answer: "T", options: ["N", "J", "M", "T"], explanation: "+2, +4. P(16)+4=20(T)." },
+    { alphabet: "EN", series: "C E I K O Q ?", answer: "U", options: ["U", "T", "S", "V"], explanation: "+2, +4. Q(17)+4=21(U)." },
+    { alphabet: "EN", series: "F H L N R T ?", answer: "X", options: ["X", "Y", "Z", "W"], explanation: "+2, +4. T(20)+4=24(X)." },
+    { alphabet: "EN", series: "M N P S W ?", answer: "B", options: ["Z", "H", "B", "O"], explanation: "M(13)+1, +2, +3, +4. W(23)+5=28 -> B." },
+    { alphabet: "EN", series: "A B D G K ?", answer: "P", options: ["P", "O", "N", "Q"], explanation: "Incrementos +1, +2, +3, +4. K(11)+5=16(P)." },
+    { alphabet: "EN", series: "C D F I M ?", answer: "R", options: ["R", "S", "T", "Q"], explanation: "Incrementos +1, +2, +3, +4. M(13)+5=18(R)." },
+    { alphabet: "EN", series: "X T P L ?", answer: "H", options: ["F", "I", "G", "H"], explanation: "-4 constante. L(12)-4=8(H)." },
+    { alphabet: "EN", series: "W S O K ?", answer: "G", options: ["G", "H", "F", "E"], explanation: "-4 constante. K(11)-4=7(G)." },
+    { alphabet: "EN", series: "Z V R N ?", answer: "J", options: ["J", "I", "H", "K"], explanation: "-4 constante. N(14)-4=10(J)." },
+    { alphabet: "EN", series: "G H A J K E M N I ?", answer: "O", options: ["Q", "P", "N", "O"], explanation: "Pares consecutivos y vocales." },
+    { alphabet: "ES", series: "B C U D E O F G ?", answer: "I", options: ["I", "H", "J", "K"], explanation: "Pares y vocales inversas." },
+    { alphabet: "ES", series: "O M A U M A A M A ?", answer: "E", options: ["D", "E", "A", "C"], explanation: "Secuencia de vocales." },
+    { alphabet: "ES", series: "E X I X O X U X ?", answer: "A", options: ["A", "E", "I", "O"], explanation: "Vocales saltando X." },
+    { alphabet: "ES", series: "A Y E Y I Y O Y ?", answer: "U", options: ["U", "A", "E", "I"], explanation: "Vocales saltando Y." },
   ];
 
-  // Mejora clave: trampas más inteligentes para pares en modo medio
   const generateOptions = (correct, alphabet) => {
     const options = new Set([correct.toUpperCase()]);
     const isPair = correct.length === 2;
@@ -210,21 +199,18 @@ export default function SeriesLetras() {
       const pos1 = getPos(first, alphabet);
       const pos2 = getPos(second, alphabet);
 
-      // Trampa fuerte: misma primera letra + segunda con diferencia mínima de 2
       let offset = Math.random() < 0.5 ? 2 : -2;
-      if (Math.abs(offset) < 2) offset = offset > 0 ? 2 : -2; // forzamos mínimo ±2
+      if (Math.abs(offset) < 2) offset = offset > 0 ? 2 : -2; 
       const trapSecond = getLetter(pos2 + offset, alphabet);
       const trap1 = first + trapSecond;
       if (trap1 !== correct) options.add(trap1);
 
-      // Trampa secundaria: misma segunda letra + primera cercana (pero no tan cercana)
       offset = Math.random() < 0.5 ? 2 : -2;
       const trapFirst = getLetter(pos1 + offset, alphabet);
       const trap2 = trapFirst + second;
       if (trap2 !== correct && !options.has(trap2)) options.add(trap2);
     }
 
-    // Rellenar con distractoras normales (más variadas)
     while (options.size < 4) {
       let distractor;
       if (isTriple) {
@@ -245,21 +231,6 @@ export default function SeriesLetras() {
     return Array.from(options).sort(() => Math.random() - 0.5);
   };
 
-  const generateDynamicProblem = (alphabet, showVisuals) => {
-    const key = Object.keys(problemGenerators)[Math.floor(Math.random() * Object.keys(problemGenerators).length)];
-    const generator = problemGenerators[key];
-    const problem = generator(alphabet);
-    const options = generateOptions(problem.answer, alphabet);
-
-    return {
-      series: problem.series.join(" "),
-      answer: problem.answer,
-      options,
-      explanation: problem.explanation,
-      showVisuals,
-    };
-  };
-
   const shuffleArray = (array) => {
     return array.sort(() => Math.random() - 0.5);
   };
@@ -270,6 +241,7 @@ export default function SeriesLetras() {
     setScore(0);
     setCurrentQuestion(0);
 
+    // Default alphabet (usado solo en modo practica libre)
     const alphabet = ALPHABETS[alphabetType];
     let time = 6;
     let showVisuals = false;
@@ -302,39 +274,36 @@ export default function SeriesLetras() {
           options,
           explanation: problem.explanation,
           showVisuals,
+          alphabet: alphabetType // Guardamos qué alfabeto generó esto
         });
       }
     } else {
-      // Realistic modes
-      setAlphabetType("ES"); // Fix to ES for realistic problems
+      // Modos realistas
       time = gameMode === "realistic-practice" ? 10 : 6;
       showVisuals = gameMode === "realistic-practice";
 
-      // Use static realisticProblems
       const shuffled = shuffleArray([...realisticProblems]);
-      // If numQuestions > length, slice and repeat if necessary
       if (numQuestions > shuffled.length) {
         const repeats = Math.ceil(numQuestions / shuffled.length);
         const extended = [];
         for (let i = 0; i < repeats; i++) {
           extended.push(...shuffleArray([...realisticProblems]));
         }
-        generatedProblems = extended.slice(0, numQuestions).map((p) => ({
-          series: p.series,
-          answer: p.answer,
-          options: shuffleArray([...p.options]),
-          explanation: p.explanation,
-          showVisuals,
-        }));
+        generatedProblems = extended.slice(0, numQuestions);
       } else {
-        generatedProblems = shuffled.slice(0, numQuestions).map((p) => ({
-          series: p.series,
-          answer: p.answer,
-          options: shuffleArray([...p.options]),
-          explanation: p.explanation,
-          showVisuals,
-        }));
+        generatedProblems = shuffled.slice(0, numQuestions);
       }
+
+      // Procesar opciones para asegurar aleatoriedad en cada juego
+      generatedProblems = generatedProblems.map(p => {
+        // Usamos el alfabeto ESPECÍFICO del problema para generar distractores si hacen falta
+        const probAlphabet = ALPHABETS[p.alphabet || "EN"];
+        return {
+          ...p,
+          options: shuffleArray([...p.options]),
+          showVisuals
+        };
+      });
     }
 
     setProblems(generatedProblems);
@@ -404,6 +373,14 @@ export default function SeriesLetras() {
     } else {
       setCurrentQuestion((q) => q + 1);
     }
+  };
+
+  // Helper para determinar qué alfabeto usar en el renderizado actual
+  const getCurrentAlphabet = () => {
+    if (!problems[currentQuestion]) return ALPHABETS.EN;
+    // Si el problema tiene un alfabeto específico (realistic), úsalo. Si no (practice), usa el del estado.
+    const type = problems[currentQuestion].alphabet || alphabetType;
+    return ALPHABETS[type] || ALPHABETS.EN;
   };
 
   return (
@@ -492,8 +469,8 @@ export default function SeriesLetras() {
                   onChange={(e) => setAlphabetType(e.target.value)}
                   className="border p-2 rounded"
                 >
-                  <option value="ES">Español</option>
-                  <option value="EN">Inglés</option>
+                  <option value="ES">Español (Incluye Ñ)</option>
+                  <option value="EN">Inglés (Sin Ñ)</option>
                 </select>
               </div>
             </>
@@ -523,20 +500,24 @@ export default function SeriesLetras() {
           </div>
 
           {problems[currentQuestion].showVisuals && (
-            <div className="text-sm text-gray-500 mb-4">
+            <div className="text-sm text-gray-500 mb-4 bg-gray-50 p-2 rounded">
+              <p className="text-xs mb-1 font-bold text-gray-400">
+                Ayuda visual ({problems[currentQuestion].alphabet === 'ES' ? 'Español con Ñ' : 'Inglés sin Ñ'}):
+              </p>
               {problems[currentQuestion].series.split(" ").map((item, i) => {
+                const activeAlphabet = getCurrentAlphabet();
                 if (item.length === 2) {
                   const first = item[0];
                   const second = item[1];
                   return (
-                    <span key={i}>
-                      {item} = {getPos(first, ALPHABETS[alphabetType])};{getPos(second, ALPHABETS[alphabetType])}{" "}
+                    <span key={i} className="mx-1 inline-block">
+                      {item} <span className="text-xs text-sky-600">({getPos(first, activeAlphabet)},{getPos(second, activeAlphabet)})</span>
                     </span>
                   );
                 } else if (item.length === 1) {
                   return (
-                    <span key={i}>
-                      {item} = {getPos(item, ALPHABETS[alphabetType])}{" "}
+                    <span key={i} className="mx-1 inline-block">
+                      {item} <span className="text-xs text-sky-600">({getPos(item, activeAlphabet)})</span>
                     </span>
                   );
                 } else {
@@ -563,7 +544,7 @@ export default function SeriesLetras() {
           </div>
 
           {showExplanation && (
-            <div className="text-slate-700 mb-4 italic">
+            <div className="text-slate-700 mb-4 italic bg-yellow-50 p-3 rounded border border-yellow-200">
               {problems[currentQuestion].explanation}
             </div>
           )}
@@ -581,7 +562,7 @@ export default function SeriesLetras() {
             {feedback}
           </div>
 
-          <div className="text-slate-600 mt-4">
+          <div className="text-slate-600 mt-4 text-sm">
             Pregunta {currentQuestion + 1} de {totalQuestions}
           </div>
         </div>
