@@ -95,7 +95,8 @@ export default function SeriesLetras() {
     doublePairs: (alphabet) => {
       let jumpBetweenStarts, gapInPair;
 
-      if (difficulty === "medium" || difficulty === "hard") {
+      // Actualizado para incluir experto
+      if (difficulty === "medium" || difficulty === "hard" || difficulty === "expert") {
         gapInPair = Math.floor(Math.random() * 2) + 3; 
         jumpBetweenStarts = Math.floor(Math.random() * 4) + 5; 
       } else {
@@ -193,7 +194,8 @@ export default function SeriesLetras() {
     const isPair = correct.length === 2;
     const isTriple = correct.includes(" ");
 
-    if (isPair && (difficulty === "medium" || difficulty === "hard")) {
+    // Actualizado para incluir experto
+    if (isPair && (difficulty === "medium" || difficulty === "hard" || difficulty === "expert")) {
       const first = correct[0];
       const second = correct[1];
       const pos1 = getPos(first, alphabet);
@@ -250,8 +252,11 @@ export default function SeriesLetras() {
     if (gameMode === "practice") {
       if (difficulty === "easy") time = 10;
       else if (difficulty === "medium") time = 10;
-      else if (difficulty === "hard") time = 8;
-      showVisuals = true;
+      else if (difficulty === "hard") time = 6;
+      else if (difficulty === "expert") time = 8; // Tiempo Experto
+      
+      // Visuals true para easy/medium/hard, false para expert
+      showVisuals = difficulty !== "expert";
 
       for (let i = 0; i < numQuestions; i++) {
         const easyPool = ["simpleAsc", "simpleDesc"];
@@ -261,7 +266,7 @@ export default function SeriesLetras() {
         let pool = [];
         if (difficulty === "easy") pool = Math.random() < 0.5 ? easyPool : mediumPool;
         else if (difficulty === "medium") pool = mediumPool;
-        else if (difficulty === "hard") pool = hardPool;
+        else if (difficulty === "hard" || difficulty === "expert") pool = hardPool; // Pool Experto = Pool Hard
 
         const key = pool[Math.floor(Math.random() * pool.length)];
         const generator = problemGenerators[key];
@@ -318,7 +323,9 @@ export default function SeriesLetras() {
             ? 10
             : difficulty === "medium"
             ? 10
-            : 8
+            : difficulty === "hard"
+            ? 6
+            : 8 // Expert
           : gameMode === "realistic-practice"
           ? 10
           : 6
@@ -460,6 +467,7 @@ export default function SeriesLetras() {
                   <option value="easy">Fácil</option>
                   <option value="medium">Media</option>
                   <option value="hard">Difícil</option>
+                  <option value="expert">Experto</option>
                 </select>
               </div>
               <div>

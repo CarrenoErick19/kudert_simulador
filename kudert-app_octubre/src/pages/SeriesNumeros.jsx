@@ -112,20 +112,46 @@ const problemGenerators = {
     return { series, answer, explanation, difficulty: "easy" };
   },
 
-  // Serie geométrica (mejorada: ascendente/descendente explícito, ratios variables)
+  // Serie geométrica (MODIFICADA: Garantiza enteros en respuestas descendentes)
   geometrica: () => {
     const ascending = Math.random() > 0.5;
-    const start = getRandomInt(2, 8);
-    const ratio = getRandomInt(2, 5);
     const length = getRandomInt(3, 5);
-    const series = Array.from({ length }, (_, i) => start * (ascending ? ratio ** i : ratio ** (length - 1 - i)));
-    const answer = ascending ? series[series.length - 1] * ratio : series[series.length - 1] / ratio;
-    return {
-      series,
-      answer,
-      explanation: `Serie geométrica ${ascending ? "ascendente" : "descendente"}: ${ascending ? "multiplica" : "divide"} por ${ratio}.`,
-      difficulty: "medium",
-    };
+    const ratio = getRandomInt(2, 4); // Ratio limitado a 4 para evitar números gigantes
+
+    if (ascending) {
+      const start = getRandomInt(2, 6);
+      const series = Array.from({ length }, (_, i) => start * (ratio ** i));
+      const answer = series[series.length - 1] * ratio;
+      return {
+        series,
+        answer,
+        explanation: `Serie geométrica ascendente: multiplica por ${ratio}.`,
+        difficulty: "medium",
+      };
+    } else {
+      // Lógica inversa para evitar decimales:
+      // Elegimos primero la RESPUESTA (entero pequeño)
+      const finalAnswer = getRandomInt(1, 9); 
+      
+      // Construimos la serie hacia atrás multiplicando, así aseguramos que al dividir sea exacto
+      const tempSeries = [finalAnswer];
+      for (let i = 0; i < length; i++) {
+        tempSeries.push(tempSeries[tempSeries.length - 1] * ratio);
+      }
+      
+      // tempSeries ahora es [Respuesta, ..., Inicio]
+      // Invertimos y quitamos la respuesta para mostrar el problema
+      const fullSeries = tempSeries.reverse(); // [Inicio, ..., Final, Respuesta]
+      const answer = fullSeries.pop(); // Sacamos la respuesta
+      const series = fullSeries; // Lo que queda es la serie
+
+      return {
+        series,
+        answer,
+        explanation: `Serie geométrica descendente: divide por ${ratio}.`,
+        difficulty: "medium",
+      };
+    }
   },
 
   // Serie alternante (mejorada: basada en grupos con permutaciones)
@@ -180,18 +206,34 @@ const problemGenerators = {
       };
     } else {
       const isEuler = Math.random() > 0.5;
-      const digits = isEuler ? "718281828459045" : "141592653589793"; // Dígitos después del punto
+      // CORRECCIÓN: Se extendieron las cadenas de dígitos para evitar índices fuera de rango que colgaban el simulador
+      const digits = isEuler 
+        ? "718281828459045235360287471352" 
+        : "141592653589793238462643383279"; 
+      
       const groupSize = getRandomInt(1, 2) + 1; // Pares o singles
       const targetSum = isEuler ? 9 : 10; // Como en PDF
       const numGroups = getRandomInt(4, 6);
       const series = [];
       let index = 0;
       for (let g = 0; g < numGroups; g++) {
+        // Validación extra de seguridad
+        if (index + groupSize > digits.length) break; 
+        
         const group = digits.slice(index, index + groupSize).split("").map(Number);
         series.push(...group);
         index += groupSize;
       }
-      const nextGroup = digits.slice(index, index + groupSize).split("").map(Number);
+      
+      // Aseguramos que existan dígitos para el siguiente grupo
+      let nextGroup;
+      if (index + groupSize <= digits.length) {
+         nextGroup = digits.slice(index, index + groupSize).split("").map(Number);
+      } else {
+         // Fallback de seguridad por si acaso llegara al límite (aunque con strings largos no debería)
+         nextGroup = [0]; 
+      }
+      
       const answer = nextGroup[nextGroup.length - 1]; // Último dígito para completar suma
       return {
         series,
@@ -266,10 +308,17 @@ const generateOptions = (correct) => {
     return shuffleArray([...options]);
   }
   const options = new Set([correct]);
-  while (options.size < 4) {
+  // Safety break para evitar loops infinitos si correct es undefined/NaN
+  let safetyCounter = 0;
+  while (options.size < 4 && safetyCounter < 50) {
     const deviation = getRandomInt(1, 10);
     const trap = Math.random() > 0.5 ? correct + deviation : correct - deviation;
     if (trap > 0) options.add(trap);
+    safetyCounter++;
+  }
+  // Si falló en generar suficientes opciones, rellenamos con randoms seguros
+  while(options.size < 4) {
+      options.add(getRandomInt(1, 20));
   }
   return shuffleArray([...options]);
 };
