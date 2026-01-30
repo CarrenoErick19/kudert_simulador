@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // --- Configuración de tiempos por dificultad ---
@@ -16,12 +16,11 @@ const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 // --- Generadores de problemas ---
 const problemGenerators = {
-  // Serie de repetición tipo examen Kudert (mejorada: cadena única, offsets variables)
   repeticion: () => {
     const ascending = Math.random() > 0.5;
     const start = ascending ? getRandomInt(1, 9) : getRandomInt(1, 9);
-    const offset = getRandomInt(0, 2); // Offset para repeticiones no estrictas
-    const length = getRandomInt(3, 5); // Longitud variable de grupos
+    const offset = getRandomInt(0, 2); 
+    const length = getRandomInt(3, 5); 
     const seriesParts = [];
     let currentReps = 1 + offset;
 
@@ -34,9 +33,9 @@ const problemGenerators = {
       }
       const answer = String(currentNum).repeat(currentReps);
       return {
-        series: [seriesParts.join("")], // Como cadena única
+        series: [seriesParts.join("")], 
         answer,
-        explanation: `Serie de repetición ascendente como cadena continua: cada dígito se repite incrementando desde ${1 + offset} veces.`,
+        explanation: `Serie de repetición ascendente: cada dígito se repite incrementando desde ${1 + offset} veces.`,
         difficulty: "easy",
       };
     } else {
@@ -50,19 +49,18 @@ const problemGenerators = {
       return {
         series: [seriesParts.join("")],
         answer,
-        explanation: `Serie de repetición descendente como cadena continua: cada dígito se repite incrementando desde ${1 + offset} veces.`,
+        explanation: `Serie de repetición descendente: cada dígito se repite incrementando desde ${1 + offset} veces.`,
         difficulty: "easy",
       };
     }
   },
 
-  // Serie aritmética tipo examen Kudert (mejorada: más variabilidad, longitudes variables)
   aritmetica: () => {
     const type = randomFrom(["constante", "decreciente", "variable_asc", "variable_desc", "mixed"]);
     let series = [];
     let answer = 0;
     let explanation = "";
-    const length = getRandomInt(3, 8); // Longitud variable
+    const length = getRandomInt(3, 8);
 
     if (type === "constante") {
       const start = getRandomInt(5, 20);
@@ -96,7 +94,7 @@ const problemGenerators = {
       }
       answer = series[series.length - 1] - diff;
       explanation = "Serie aritmética variable descendente: resta creciente (-1, -2, -3...).";
-    } else { // mixed
+    } else { 
       const start = getRandomInt(20, 50);
       const constStep = getRandomInt(5, 10);
       series = Array.from({ length: Math.floor(length / 2) }, (_, i) => start + i * constStep);
@@ -112,13 +110,14 @@ const problemGenerators = {
     return { series, answer, explanation, difficulty: "easy" };
   },
 
-  // Serie geométrica (MODIFICADA: Garantiza enteros en respuestas descendentes)
+  // Serie geométrica (MODIFICADA SEGÚN SOLICITUD)
   geometrica: () => {
     const ascending = Math.random() > 0.5;
-    const length = getRandomInt(3, 5);
-    const ratio = getRandomInt(2, 4); // Ratio limitado a 4 para evitar números gigantes
 
     if (ascending) {
+      // MODIFICACIÓN: Solo se multiplica por 2 o 3
+      const ratio = randomFrom([2, 3]);
+      const length = getRandomInt(3, 4); // Limitamos longitud para evitar números gigantes
       const start = getRandomInt(2, 6);
       const series = Array.from({ length }, (_, i) => start * (ratio ** i));
       const answer = series[series.length - 1] * ratio;
@@ -129,21 +128,21 @@ const problemGenerators = {
         difficulty: "medium",
       };
     } else {
-      // Lógica inversa para evitar decimales:
-      // Elegimos primero la RESPUESTA (entero pequeño)
-      const finalAnswer = getRandomInt(1, 9); 
+      // MODIFICACIÓN: Máximo 4 términos antes de la interrogante.
+      const ratio = randomFrom([2, 3]); 
+      const length = 4; // Longitud fija de 4 términos según solicitud
       
-      // Construimos la serie hacia atrás multiplicando, así aseguramos que al dividir sea exacto
+      // Para evitar que siempre termine en 1, el final (respuesta) será un valor aleatorio > 1
+      const finalAnswer = getRandomInt(2, 10); 
+      
       const tempSeries = [finalAnswer];
       for (let i = 0; i < length; i++) {
         tempSeries.push(tempSeries[tempSeries.length - 1] * ratio);
       }
       
-      // tempSeries ahora es [Respuesta, ..., Inicio]
-      // Invertimos y quitamos la respuesta para mostrar el problema
-      const fullSeries = tempSeries.reverse(); // [Inicio, ..., Final, Respuesta]
-      const answer = fullSeries.pop(); // Sacamos la respuesta
-      const series = fullSeries; // Lo que queda es la serie
+      const fullSeries = tempSeries.reverse(); // [Inicio, ..., Respuesta]
+      const answer = fullSeries.pop(); // Sacamos el último como respuesta
+      const series = fullSeries; // Quedan 4 términos en la serie
 
       return {
         series,
@@ -154,10 +153,9 @@ const problemGenerators = {
     }
   },
 
-  // Serie alternante (mejorada: basada en grupos con permutaciones)
   alternante: () => {
     const ascending = Math.random() > 0.5;
-    const groupSize = 3; // Como en PDF
+    const groupSize = 3; 
     const numGroups = getRandomInt(2, 3);
     const start = ascending ? getRandomInt(1, 5) : getRandomInt(20, 30);
     const series = [];
@@ -168,90 +166,74 @@ const problemGenerators = {
       for (let i = 0; i < groupSize; i++) {
         group.push(ascending ? current + i : current - i);
       }
-      // Permutación: primero-último-medio (como 2-4-3 para 2-3-4)
       series.push(group[0], group[2], group[1]);
       current = ascending ? current + groupSize : current - groupSize;
     }
 
-    // Siguiente grupo permutado, pero solo el primero o completo según PDF
     const nextGroup = [];
     for (let i = 0; i < groupSize; i++) {
       nextGroup.push(ascending ? current + i : current - i);
     }
-    const answer = nextGroup[0]; // Como en PDF, a veces solo el primero
+    const answer = nextGroup[0];
 
     return {
       series: series.flat(),
       answer,
-      explanation: `Serie alternante en grupos de 3 con permutación (primero-último-medio). Separa en grupos para ver el patrón ${ascending ? "ascendente" : "descendente"}.`,
+      explanation: `Serie alternante en grupos de 3 con permutación. Separa en grupos para ver el patrón.`,
       difficulty: "medium",
     };
   },
 
-  // Serie especial (mejorada: Fibonacci + e/pi con sumas)
   especial: () => {
-    const type = Math.random() > 0.5 ? "fibonacci" : "constant"; // 50% cada uno
+    const type = Math.random() > 0.5 ? "fibonacci" : "constant";
     if (type === "fibonacci") {
       const a = getRandomInt(1, 5);
       const b = getRandomInt(2, 8);
       const mod = Math.random() > 0.5 ? getRandomInt(1, 2) : 0;
       const series = [a, b];
-      for (let i = 2; i < 8; i++) series.push(series[i - 1] + series[i - 2] + mod);
+      for (let i = 2; i < 6; i++) series.push(series[i - 1] + series[i - 2] + mod);
       const answer = series[series.length - 1] + series[series.length - 2] + mod;
       return {
         series,
         answer,
-        explanation: mod > 0 ? `Serie tipo Fibonacci con +${mod}. Suma los dos anteriores.` : "Serie de Fibonacci pura: suma de los dos anteriores.",
+        explanation: mod > 0 ? `Serie tipo Fibonacci con +${mod}.` : "Serie de Fibonacci pura.",
         difficulty: "hard",
       };
     } else {
       const isEuler = Math.random() > 0.5;
-      // CORRECCIÓN: Se extendieron las cadenas de dígitos para evitar índices fuera de rango que colgaban el simulador
       const digits = isEuler 
         ? "718281828459045235360287471352" 
         : "141592653589793238462643383279"; 
       
-      const groupSize = getRandomInt(1, 2) + 1; // Pares o singles
-      const targetSum = isEuler ? 9 : 10; // Como en PDF
-      const numGroups = getRandomInt(4, 6);
+      const groupSize = getRandomInt(1, 2) + 1;
+      const numGroups = getRandomInt(4, 5);
       const series = [];
       let index = 0;
       for (let g = 0; g < numGroups; g++) {
-        // Validación extra de seguridad
         if (index + groupSize > digits.length) break; 
-        
         const group = digits.slice(index, index + groupSize).split("").map(Number);
         series.push(...group);
         index += groupSize;
       }
       
-      // Aseguramos que existan dígitos para el siguiente grupo
-      let nextGroup;
-      if (index + groupSize <= digits.length) {
-         nextGroup = digits.slice(index, index + groupSize).split("").map(Number);
-      } else {
-         // Fallback de seguridad por si acaso llegara al límite (aunque con strings largos no debería)
-         nextGroup = [0]; 
-      }
-      
-      const answer = nextGroup[nextGroup.length - 1]; // Último dígito para completar suma
+      const nextDigit = digits[index] ? Number(digits[index]) : 0;
+      const answer = nextDigit;
       return {
         series,
         answer,
-        explanation: `Serie basada en dígitos de ${isEuler ? "e" : "π"} agrupados en ${groupSize}s que suman ~${targetSum}. Separa y suma para ver.`,
+        explanation: `Serie basada en dígitos de ${isEuler ? "e" : "π"}.`,
         difficulty: "hard",
       };
     }
   },
 
-  // Serie mixta (mejorada: subtipos para repeticiones, skips, posiciones)
   mixta: () => {
     const type = randomFrom(["repeticion", "skips", "posiciones"]);
     const letras = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
 
     if (type === "repeticion") {
-      const startNum = getRandomInt(2, 6) * 2; // Pares
-      const startLetterIdx = getRandomInt(0, letras.length - 10);
+      const startNum = getRandomInt(2, 6) * 2;
+      const startLetterIdx = getRandomInt(0, letras.length - 12);
       const series = [];
       let reps = 1;
       for (let i = 0; i < 4; i++) {
@@ -263,7 +245,7 @@ const problemGenerators = {
       return {
         series,
         answer,
-        explanation: "Serie mixta con números pares ascendentes y letras repetidas incrementando (b, ee, hhh...).",
+        explanation: "Serie mixta: números pares ascendentes y letras con repetición creciente.",
         difficulty: "hard",
       };
     } else if (type === "skips") {
@@ -272,11 +254,11 @@ const problemGenerators = {
       return {
         series,
         answer,
-        explanation: "Serie mixta con skips alfabéticos (skip e, g, i...): d d f (skip e), h h j (skip i), intercalado con 1 2.",
+        explanation: "Serie mixta con skips alfabéticos intercalados con 1, 2.",
         difficulty: "hard",
       };
-    } else { // posiciones
-      const startLetterIdx = 2; // C=3 (posición 3)
+    } else { 
+      const startLetterIdx = 2; 
       const step = 3;
       const startNum = 4;
       const series = [];
@@ -286,44 +268,40 @@ const problemGenerators = {
       }
       const answer = letras[startLetterIdx + 4 * step].toUpperCase();
       return {
-        series: series.slice(0, -1), // Quita el último número para preguntar por letra
+        series: series.slice(0, -1),
         answer,
-        explanation: `Serie mixta alternante letra-número; letras por posiciones múltiplos de ${step} (C=3, F=6, I=9...). Siguiente letra posición ${3 + 4 * step}.`,
+        explanation: `Serie mixta letra-número. Letras saltando de ${step} en ${step}.`,
         difficulty: "hard",
       };
     }
   },
 };
 
-// --- Generador de opciones (sin cambios mayores) ---
 const generateOptions = (correct) => {
   if (typeof correct === "string" && isNaN(correct)) {
     const letras = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
     const options = new Set([correct.toUpperCase()]);
     while (options.size < 4) {
       const idx = letras.indexOf(correct.toUpperCase());
-      const rand = letras[getRandomInt(Math.max(0, idx - 3), Math.min(idx + 3, letras.length - 1))];
+      const rand = letras[getRandomInt(Math.max(0, idx - 5), Math.min(idx + 5, letras.length - 1))];
       options.add(rand);
     }
     return shuffleArray([...options]);
   }
   const options = new Set([correct]);
-  // Safety break para evitar loops infinitos si correct es undefined/NaN
   let safetyCounter = 0;
   while (options.size < 4 && safetyCounter < 50) {
     const deviation = getRandomInt(1, 10);
     const trap = Math.random() > 0.5 ? correct + deviation : correct - deviation;
-    if (trap > 0) options.add(trap);
+    if (trap >= 0) options.add(trap);
     safetyCounter++;
   }
-  // Si falló en generar suficientes opciones, rellenamos con randoms seguros
   while(options.size < 4) {
-      options.add(getRandomInt(1, 20));
+      options.add(getRandomInt(1, 100));
   }
   return shuffleArray([...options]);
 };
 
-// --- Componente principal ---
 export default function SeriesNumeros() {
   const navigate = useNavigate();
 
@@ -343,22 +321,16 @@ export default function SeriesNumeros() {
   const timerRef = useRef(null);
   const answeredRef = useRef(false);
 
-  // --- Selección según modo (ajustada para más énfasis en hard) ---
   const getAvailableTypes = () => {
     if (gameMode === "realistic") {
-      // Distribución ajustada: 40% easy, 30% medium, 30% hard
       const roll = Math.random() * 100;
       if (roll < 40) return randomFrom(["repeticion", "aritmetica"]);
-      else if (roll < 70) return randomFrom(["geometrica", "alternante"]);
+      else if (roll < 70) return Math.random() < 0.75 ? "geometrica" : "alternante";
       else return randomFrom(["especial", "mixta"]);
     } else {
-      if (difficulty === "easy") {
-        return randomFrom(["repeticion", "aritmetica"]);
-      } else if (difficulty === "medium") {
-        return randomFrom(["geometrica", "alternante"]);
-      } else {
-        return randomFrom(["especial", "mixta"]);
-      }
+      if (difficulty === "easy") return randomFrom(["repeticion", "aritmetica"]);
+      else if (difficulty === "medium") return Math.random() < 0.75 ? "geometrica" : "alternante";
+      else return randomFrom(["especial", "mixta"]);
     }
   };
 
@@ -375,7 +347,6 @@ export default function SeriesNumeros() {
     answeredRef.current = false;
   };
 
-  // --- Timer ---
   useEffect(() => {
     if (!problem || screen !== "game") return;
     clearInterval(timerRef.current);
@@ -392,13 +363,12 @@ export default function SeriesNumeros() {
     return () => clearInterval(timerRef.current);
   }, [problem, screen]);
 
-  // --- Evaluar respuesta ---
   const handleAnswer = (selected) => {
     if (answeredRef.current) return;
     answeredRef.current = true;
     clearInterval(timerRef.current);
 
-    const correct = selected == problem.answer; // == para manejar num/string
+    const correct = String(selected).toUpperCase() === String(problem.answer).toUpperCase();
     if (correct) {
       setScore((s) => s + 1);
       setFeedback("✅ ¡Correcto!");
@@ -432,135 +402,136 @@ export default function SeriesNumeros() {
     generateProblem();
   };
 
-  // --- Render ---
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-100 p-4">
-      <h1 className="text-2xl font-bold mb-6">🔢 Series Numéricas</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-100 p-4 font-sans text-slate-900">
+      <h1 className="text-3xl font-bold mb-6 text-indigo-800">🔢 Series Numéricas</h1>
+      
       <button
         onClick={() => navigate(-1)}
-        className="bg-gray-500 text-white px-4 py-2 rounded-lg mb-4"
+        className="bg-white text-slate-600 border border-slate-300 px-4 py-2 rounded-lg mb-6 hover:bg-slate-50 shadow-sm transition-all"
       >
-        Volver
+        ← Volver
       </button>
 
-      {/* Selección de modo */}
       {screen === "modeSelection" && (
-        <div className="flex flex-col gap-4 items-center">
+        <div className="flex flex-col gap-4 w-full max-w-xs">
           <button
-            onClick={() => {
-              setGameMode("practice");
-              setScreen("settings");
-            }}
-            className="bg-sky-600 text-white px-6 py-3 rounded-lg"
+            onClick={() => { setGameMode("practice"); setScreen("settings"); }}
+            className="bg-sky-600 text-white px-6 py-4 rounded-xl shadow-md hover:bg-sky-700 transition-all font-bold text-lg"
           >
             🧠 Modo Práctica
           </button>
           <button
-            onClick={() => {
-              setGameMode("realistic");
-              setScreen("settings");
-            }}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg"
+            onClick={() => { setGameMode("realistic"); setScreen("settings"); }}
+            className="bg-indigo-600 text-white px-6 py-4 rounded-xl shadow-md hover:bg-indigo-700 transition-all font-bold text-lg"
           >
             ⏱️ Modo Realista
           </button>
         </div>
       )}
 
-      {/* Configuración */}
       {screen === "settings" && (
-        <div className="flex flex-col items-center gap-3">
+        <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-5 w-full max-w-sm">
           {gameMode === "practice" && (
-            <>
-              <label className="font-semibold">Dificultad:</label>
+            <div className="w-full">
+              <label className="block text-sm font-bold text-slate-700 mb-2 text-center uppercase tracking-wider">Dificultad</label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
-                className="border p-2 rounded"
+                className="w-full border-2 border-slate-200 p-3 rounded-xl focus:border-indigo-500 outline-none transition-all text-center font-medium"
               >
                 <option value="easy">Fácil</option>
                 <option value="medium">Intermedio</option>
                 <option value="hard">Difícil</option>
               </select>
-            </>
+            </div>
           )}
-          <label className="font-semibold">Preguntas:</label>
-          <input
-            type="number"
-            value={questionsInput}
-            onChange={(e) => setQuestionsInput(e.target.value)}
-            className="border p-2 rounded text-center w-20"
-          />
+          <div className="w-full">
+            <label className="block text-sm font-bold text-slate-700 mb-2 text-center uppercase tracking-wider">Número de Preguntas</label>
+            <input
+              type="number"
+              value={questionsInput}
+              onChange={(e) => setQuestionsInput(e.target.value)}
+              className="w-full border-2 border-slate-200 p-3 rounded-xl focus:border-indigo-500 outline-none transition-all text-center text-xl font-bold"
+            />
+          </div>
           <button
             onClick={startGame}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg mt-2"
+            className="w-full bg-green-600 text-white px-6 py-4 rounded-xl font-black text-xl hover:bg-green-700 shadow-lg active:transform active:scale-95 transition-all"
           >
-            Comenzar
+            ¡COMENZAR!
           </button>
         </div>
       )}
 
-      {/* Juego */}
       {screen === "game" && problem && (
-        <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl text-center">
-          <div className="text-xl mb-4 font-semibold">
-            {problem.series.join(" - ")} - ¿?
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl text-center border-t-8 border-indigo-500">
+          <div className="flex justify-between items-center mb-6">
+            <span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-500 uppercase">
+              Pregunta {currentQuestion + 1} de {totalQuestions}
+            </span>
+            <div className={`text-xl font-mono font-bold ${timeLeft < 4 ? 'text-red-500 animate-pulse' : 'text-slate-700'}`}>
+              00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="text-4xl md:text-5xl mb-10 font-black text-indigo-900 tracking-tight">
+            {problem.series.join(" - ")} - <span className="text-indigo-500">¿?</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-8">
             {problem.options.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => handleAnswer(opt)}
                 disabled={showNext}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                className="bg-slate-50 border-2 border-slate-200 text-slate-800 px-6 py-4 rounded-xl font-bold text-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all disabled:opacity-50 disabled:hover:bg-slate-50 disabled:hover:border-slate-200 shadow-sm"
               >
                 {opt}
               </button>
             ))}
           </div>
 
-          <div className="text-lg mb-2">⏳ Tiempo: {timeLeft}s</div>
           {explanation && (
-            <div className="text-slate-700 bg-slate-100 p-3 rounded mb-2">
-              {explanation}
+            <div className="text-indigo-800 bg-indigo-50 p-4 rounded-xl mb-6 text-sm italic font-medium border border-indigo-100">
+              💡 {explanation}
             </div>
           )}
 
           {showNext && (
             <button
               onClick={nextQuestion}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg mt-2"
+              className="w-full bg-slate-900 text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-black transition-all shadow-md"
             >
-              {currentQuestion + 1 >= totalQuestions ? "Ver resultados" : "Siguiente"}
+              {currentQuestion + 1 >= totalQuestions ? "Ver Resultados Finales" : "Siguiente Pregunta →"}
             </button>
           )}
 
-          <div className={`text-lg font-bold mt-3 ${feedbackColor}`}>
+          <div className={`text-2xl font-black mt-6 transition-all ${feedbackColor}`}>
             {feedback}
-          </div>
-
-          <div className="text-slate-700 mt-2">
-            Pregunta {currentQuestion + 1} / {totalQuestions}
           </div>
         </div>
       )}
 
-      {/* Pantalla final */}
       {screen === "end" && (
-        <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-          <h2 className="text-2xl font-bold mb-3">🎯 Resultado final</h2>
-          <p className="text-lg mb-2">
-            Puntaje: {score} / {totalQuestions}
-          </p>
-          <p className="text-lg text-indigo-600 font-semibold mb-4">
-            Porcentaje de aciertos: {((score / totalQuestions) * 100).toFixed(1)}%
-          </p>
+        <div className="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-md w-full border-b-8 border-indigo-600">
+          <div className="text-6xl mb-6">🏆</div>
+          <h2 className="text-3xl font-black mb-2 text-slate-800 uppercase tracking-tighter">¡Terminado!</h2>
+          <div className="flex flex-col gap-2 mb-8 mt-6">
+            <div className="flex justify-between p-4 bg-slate-50 rounded-xl">
+              <span className="font-bold text-slate-500">Puntaje</span>
+              <span className="font-black text-indigo-600 text-xl">{score} / {totalQuestions}</span>
+            </div>
+            <div className="flex justify-between p-4 bg-slate-50 rounded-xl">
+              <span className="font-bold text-slate-500">Precisión</span>
+              <span className="font-black text-indigo-600 text-xl">{((score / totalQuestions) * 100).toFixed(0)}%</span>
+            </div>
+          </div>
           <button
             onClick={() => setScreen("modeSelection")}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg"
+            className="w-full bg-indigo-600 text-white px-6 py-4 rounded-2xl font-bold text-xl hover:bg-indigo-700 shadow-lg transition-all"
           >
-            Volver al menú
+            Reiniciar Juego
           </button>
         </div>
       )}
