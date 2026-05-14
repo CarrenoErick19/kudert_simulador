@@ -13,6 +13,7 @@ export default function Home() {
         <MenuButton text="Series Números" onClick={() => navigate('/series-numeros')} />
         <MenuButton text="Razonamiento" onClick={() => navigate('/razonamiento')} />
         <MenuButton text="Personalidad" onClick={() => navigate('/personalidad')} />
+        <MenuButton text="Prueba Educar 2026" onClick={() => navigate('/prueba-educar-2026')} />
       </div>
     </div>
   );
