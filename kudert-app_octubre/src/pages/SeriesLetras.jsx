@@ -252,8 +252,8 @@ export default function SeriesLetras() {
     if (gameMode === "practice") {
       if (difficulty === "easy") time = 10;
       else if (difficulty === "medium") time = 10;
-      else if (difficulty === "hard") time = 6;
-      else if (difficulty === "expert") time = 8; // Tiempo Experto
+      else if (difficulty === "hard") time = 8;
+      else if (difficulty === "expert") time = 12; // Tiempo Experto
       
       // Visuals true para easy/medium/hard, false para expert
       showVisuals = difficulty !== "expert";
@@ -324,10 +324,10 @@ export default function SeriesLetras() {
             : difficulty === "medium"
             ? 10
             : difficulty === "hard"
-            ? 6
-            : 8 // Expert
+            ? 8
+            : 12 // Expert
           : gameMode === "realistic-practice"
-          ? 10
+          ? 9
           : 6
       );
       setFeedback("");
